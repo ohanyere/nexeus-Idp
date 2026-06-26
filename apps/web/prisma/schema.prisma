@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Team {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  services    Service[]
+  auditLogs   AuditLog[]
+}
+
+model Service {
+  id                   String               @id @default(cuid())
+  name                 String               @unique
+  description          String
+  repositoryUrl        String
+  repositoryOwner      String
+  repositoryName       String
+  defaultBranch        String
+  dockerHubNamespace   String
+  dockerImage          String
+  template             String
+  visibility           String
+  ownerEmail           String
+  estimatedMonthlyCost Int
+  healthStatus         String
+  deploymentStatus     String
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  teamId               String
+  team                 Team                 @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  environments         ServiceEnvironment[]
+  capabilities         ServiceCapability[]
+  deployments          Deployment[]
+  auditLogs            AuditLog[]
+}
+
+model ServiceEnvironment {
+  id             String  @id @default(cuid())
+  name           String
+  currentVersion String
+  status         String
+  serviceId      String
+  service        Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, name])
+}
+
+model ServiceCapability {
+  id        String  @id @default(cuid())
+  name      String
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, name])
+}
+
+model Deployment {
+  id             String   @id @default(cuid())
+  serviceId      String
+  environment    String
+  version        String
+  status         String
+  commitSha      String
+  imageTag       String
+  deployedBy     String
+  deployedAt     DateTime
+  deploymentType String
+  service        Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  actor      String
+  targetType String
+  targetName String
+  message    String
+  createdAt  DateTime @default(now())
+  serviceId  String?
+  service    Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  teamId     String?
+  team       Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+}
