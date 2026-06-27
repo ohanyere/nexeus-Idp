@@ -40,6 +40,7 @@ type CreateServiceSteps = {
  fleetDiscovery: WorkflowStep;
  personalization: WorkflowStep;
  secrets: WorkflowStep;
+ fleetRegistry: WorkflowStep;
  catalog: WorkflowStep;
 };
 
@@ -186,6 +187,10 @@ function createInitialSteps(): CreateServiceSteps {
  secrets: {
  status: "skipped",
  message: "CI secrets wait for the repository."
+ },
+ fleetRegistry: {
+ status: "skipped",
+ message: "Fleet registry waits for repository enrichment."
  },
  catalog: {
  status: "skipped",
@@ -422,6 +427,26 @@ export async function POST(request: Request) {
  };
  }
 
+ try {
+ const fleetRegistryResult = await github.registerServiceInFleetRegistry(validation.data.name);
+ steps.fleetRegistry = {
+ status: "success",
+ message: "Fleet registry registered.",
+ details: {
+ owner: fleetRegistryResult.owner,
+ repo: fleetRegistryResult.repo,
+ branch: fleetRegistryResult.branch,
+ files: fleetRegistryResult.files
+ }
+ };
+ } catch (fleetRegistryError) {
+ logDevelopmentStepError("fleetRegistry", fleetRegistryError);
+ steps.fleetRegistry = {
+ status: "warning",
+ message: `Fleet registry registration failed: ${getErrorMessage(fleetRegistryError)}`
+ };
+ }
+
  let service;
 
  try {
@@ -459,6 +484,7 @@ export async function POST(request: Request) {
  steps.personalization.status !== "success" ? steps.personalization.message : undefined,
  steps.fleetDiscovery.status === "warning" ? steps.fleetDiscovery.message : undefined,
  steps.secrets.status === "warning" ? `${steps.secrets.message} Needs platform attention.` : undefined,
+ steps.fleetRegistry.status === "warning" ? steps.fleetRegistry.message : undefined,
  steps.catalog.status !== "success" ? steps.catalog.message : undefined
  ]) || undefined;
 

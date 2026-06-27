@@ -32,6 +32,21 @@ export type RepositoryTopicsResult = {
  topics: string[];
 };
 
+export type FleetRegistryEnvironment = "dev" | "stage" | "prod";
+
+export type FleetRegistryFileResult = {
+ environment: FleetRegistryEnvironment;
+ path: string;
+ status: "created" | "updated" | "unchanged";
+};
+
+export type FleetRegistryRegistrationResult = {
+ owner: string;
+ repo: string;
+ branch: string;
+ files: FleetRegistryFileResult[];
+};
+
 export type GenerateRepositoryResult = {
  repository: RepositoryInfo;
  alreadyExisted: boolean;
@@ -113,6 +128,13 @@ type GitHubFileUpdateRetryResult = {
  retried: boolean;
 };
 
+type RepositoryContentFile = {
+ type: "file";
+ content?: string;
+ encoding?: string;
+ sha?: string;
+};
+
 const templatePlaceholders = [
  "__SERVICE_NAME__",
  "__TEAM_NAME__",
@@ -131,6 +153,11 @@ const templateEnvVars: Record<GoldenPathTemplate, string> = {
 
 const fileUpdateMaxAttempts = 5;
 const fileUpdateBackoffMs = [1000, 2000, 4000, 8000, 16000];
+const fleetRegistryOwner = "ohanyere";
+const fleetRegistryRepo = "platform-core";
+const fleetRegistryBranch = "main";
+const fleetRegistryEnvironments = ["dev", "stage", "prod"] as const satisfies readonly FleetRegistryEnvironment[];
+const fleetRegistryCommitMessage = "feat: register generated services in fleet registry";
 
 export class GitHubConfigurationError extends Error {
  constructor(message: string) {
@@ -331,6 +358,17 @@ function personalizeRepositoryContent(content: string, input: PersonalizeReposit
  return personalized.replace(dockerImagePattern, `kuberpull/${input.serviceName}:$1`);
 }
 
+function buildFleetRegistryContent(serviceName: string, environment: FleetRegistryEnvironment) {
+ return [
+ `service: ${serviceName}`,
+ `repoURL: https://github.com/${fleetRegistryOwner}/${serviceName}.git`,
+ "branch: main",
+ `path: k8s/overlays/${environment}`,
+ `namespace: ${serviceName}-${environment}`,
+ ""
+ ].join("\n");
+}
+
 function toRepositoryInfo(repository: {
  html_url?: string | null;
  name?: string | null;
@@ -454,6 +492,66 @@ export class GitHubService {
 
  return {
  topics: mergedTopics
+ };
+ }
+
+ async registerServiceInFleetRegistry(serviceName: string): Promise<FleetRegistryRegistrationResult> {
+ const files: FleetRegistryFileResult[] = [];
+
+ for (const environment of fleetRegistryEnvironments) {
+ const path = `gitops/fleet/services/${environment}/${serviceName}.yaml`;
+ const content = buildFleetRegistryContent(serviceName, environment);
+ let sha: string | undefined;
+ let status: FleetRegistryFileResult["status"] = "created";
+
+ try {
+ const existingContent = await this.octokit.repos.getContent({
+ owner: fleetRegistryOwner,
+ repo: fleetRegistryRepo,
+ path,
+ ref: fleetRegistryBranch
+ });
+
+ if (Array.isArray(existingContent.data) || existingContent.data.type !== "file") {
+ throw new Error(`Expected ${path} in ${fleetRegistryOwner}/${fleetRegistryRepo} to be a file.`);
+ }
+
+ const fileContent = existingContent.data as RepositoryContentFile;
+ sha = fileContent.sha;
+ status = "updated";
+
+ if (fileContent.content && fileContent.encoding === "base64") {
+ const currentContent = Buffer.from(fileContent.content, "base64").toString("utf8");
+ if (currentContent === content) {
+ status = "unchanged";
+ files.push({ environment, path, status });
+ continue;
+ }
+ }
+ } catch (error) {
+ if (getGitHubErrorStatus(error) !== 404) {
+ throw error;
+ }
+ }
+
+ await this.octokit.repos.createOrUpdateFileContents({
+ owner: fleetRegistryOwner,
+ repo: fleetRegistryRepo,
+ path,
+ message: fleetRegistryCommitMessage,
+ content: Buffer.from(content, "utf8").toString("base64"),
+ sha,
+ branch: fleetRegistryBranch
+ });
+
+ files.push({ environment, path, status });
+ }
+
+ return {
+ owner: fleetRegistryOwner,
+ repo: fleetRegistryRepo,
+ branch: fleetRegistryBranch,
+ files
  };
  }
 

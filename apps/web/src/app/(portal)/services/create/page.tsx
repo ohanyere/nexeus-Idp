@@ -35,8 +35,15 @@ type WorkflowStep = {
  personalizedFileCount?: number;
  remainingPlaceholderFilePaths?: string[];
  configuredSecretNames?: string[];
+ files?: unknown[];
  [key: string]: unknown;
  };
+};
+
+type FleetRegistryFile = {
+ path: string;
+ environment?: string;
+ status?: string;
 };
 
 type CreateServiceSteps = {
@@ -44,6 +51,7 @@ type CreateServiceSteps = {
  fleetDiscovery: WorkflowStep;
  personalization: WorkflowStep;
  secrets: WorkflowStep;
+ fleetRegistry: WorkflowStep;
  catalog: WorkflowStep;
 };
 
@@ -163,10 +171,17 @@ function formatStepTitle(value: string) {
  fleetDiscovery: "Fleet Discovery",
  personalization: "Personalization",
  secrets: "CI Secrets",
+ fleetRegistry: "Fleet Registry",
  catalog: "Catalog"
  };
 
  return labels[value] ?? value;
+}
+
+function isFleetRegistryFile(value: unknown): value is FleetRegistryFile {
+ return Boolean(value)
+ && typeof value === "object"
+ && typeof (value as { path?: unknown }).path === "string";
 }
 
 export default function CreateServicePage() {
@@ -495,6 +510,7 @@ export default function CreateServicePage() {
  {[
  { icon: GitBranch, label: "Create GitHub repository from template" },
  { icon: Rocket, label: "Fleet discovery configured" },
+ { icon: Rocket, label: "Fleet registry registered" },
  { icon: PackageCheck, label: "Reserve Docker image path" },
  { icon: Rocket, label: "Prepare ArgoCD application" },
  { icon: ShieldCheck, label: "Record catalog and audit metadata" }
@@ -546,6 +562,9 @@ export default function CreateServicePage() {
  {Object.entries(createdService.steps).map(([key, step]) => {
  const remainingPlaceholderFilePaths = step.details?.remainingPlaceholderFilePaths;
  const topics = Array.isArray(step.details?.topics) ? step.details.topics.filter((topic): topic is string => typeof topic === "string") : [];
+ const fleetRegistryFiles = Array.isArray(step.details?.files)
+ ? step.details.files.filter(isFleetRegistryFile)
+ : [];
 
  return (
  <div key={key} className="rounded-md border border-white/70 bg-white px-3 py-2">
@@ -562,6 +581,15 @@ export default function CreateServicePage() {
  <div className="mt-2 flex flex-wrap gap-1">
  {topics.map((topic) => <StatusBadge key={topic} label={topic} tone="neutral" />)}
  </div>
+ ) : null}
+ {key === "fleetRegistry" && fleetRegistryFiles.length > 0 ? (
+ <ul className="mt-2 grid gap-1 text-xs">
+ {fleetRegistryFiles.map((file) => (
+ <li key={file.path} className="break-all font-mono">
+ {file.path}{file.status ? ` (${file.status})` : ""}
+ </li>
+ ))}
+ </ul>
  ) : null}
  {key === "secrets" && step.status === "warning" ? <p className="mt-1 text-xs font-semibold">Needs platform attention.</p> : null}
  {remainingPlaceholderFilePaths && remainingPlaceholderFilePaths.length > 0 ? (
