@@ -120,19 +120,40 @@ export type MockRole = "Platform Admin" | "Team Lead" | "Developer" | "Viewer";
 
 export type PromotionEnvironment = EnvironmentName;
 
+export type PromotionApprovalStatus = "not required" | "pending" | "approved" | "rejected";
+export type PromotionMergeStatus = "not opened" | "open" | "merged" | "rejected";
+
 export type EnvironmentPromotion = {
   serviceId: string;
+  repositoryOwner: string;
+  repositoryName: string;
   environments: Array<{
     environment: PromotionEnvironment;
     version: string;
+    sha: string;
     status: string;
     tone: StatusTone;
     promotionEligibility: string;
     requiredApproval: string;
     approvedBy: string;
     promotedAt: string;
+    deployed: boolean;
   }>;
-  history: Array<{ from: string; to: string; version: string; status: string; approvedBy: string; promotedAt: string }>;
+  history: Array<{
+    from: string;
+    to: string;
+    version: string;
+    sha: string;
+    status: string;
+    approvedBy: string;
+    promotedAt: string;
+    prUrl?: string;
+    approvalStatus: PromotionApprovalStatus;
+    mergeStatus: PromotionMergeStatus;
+    deployed: boolean;
+    rejectedReason?: string;
+  }>;
+  timeline: Array<{ event: string; environment: string; time: string; status: string; tone: StatusTone }>;
 };
 
 export type Team = {
@@ -758,59 +779,124 @@ export const deployNewVersionDefaults = {
 export const environmentPromotions: EnvironmentPromotion[] = [
   {
     serviceId: "payments-api",
+    repositoryOwner: "acme",
+    repositoryName: "payments-api",
     environments: [
-      { environment: "dev", version: "v1.18.5", status: "Ready", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Team Lead", approvedBy: "Maya Chen", promotedAt: "2026-06-11 08:20" },
-      { environment: "stage", version: "v1.18.4", status: "Verified", tone: "success", promotionEligibility: "Eligible for prod", requiredApproval: "Team Lead", approvedBy: "Maya Chen", promotedAt: "2026-06-11 08:54" },
-      { environment: "prod", version: "v1.18.4", status: "Live", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Maya Chen", promotedAt: "2026-06-11 09:18" }
+      { environment: "dev", version: "v1.18.5", sha: "c4f18d2", status: "Deployed", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Lead approval by PR", approvedBy: "CI automation", promotedAt: "2026-06-11 08:20", deployed: true },
+      { environment: "stage", version: "v1.18.4", sha: "9ad31c2", status: "Verified", tone: "success", promotionEligibility: "Eligible for prod", requiredApproval: "Production approval by PR", approvedBy: "Maya Chen", promotedAt: "2026-06-11 08:54", deployed: true },
+      { environment: "prod", version: "v1.18.4", sha: "9ad31c2", status: "Live", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Maya Chen", promotedAt: "2026-06-11 09:18", deployed: true }
     ],
     history: [
-      { from: "stage", to: "prod", version: "v1.18.4", status: "completed", approvedBy: "Maya Chen", promotedAt: "2026-06-11 09:18" },
-      { from: "dev", to: "stage", version: "v1.18.4", status: "completed", approvedBy: "Maya Chen", promotedAt: "2026-06-11 08:54" }
+      { from: "stage", to: "prod", version: "v1.18.4", sha: "9ad31c2", status: "completed", approvedBy: "Maya Chen", promotedAt: "2026-06-11 09:18", prUrl: "https://github.com/acme/payments-api/pull/142", approvalStatus: "approved", mergeStatus: "merged", deployed: true },
+      { from: "dev", to: "stage", version: "v1.18.4", sha: "9ad31c2", status: "completed", approvedBy: "Maya Chen", promotedAt: "2026-06-11 08:54", prUrl: "https://github.com/acme/payments-api/pull/141", approvalStatus: "approved", mergeStatus: "merged", deployed: true }
+    ],
+    timeline: [
+      { event: "Built", environment: "dev", time: "2026-06-11 08:03", status: "succeeded", tone: "success" },
+      { event: "Scanned", environment: "dev", time: "2026-06-11 08:08", status: "passed", tone: "success" },
+      { event: "Signed", environment: "dev", time: "2026-06-11 08:10", status: "signed", tone: "success" },
+      { event: "Deployed Dev", environment: "dev", time: "2026-06-11 08:20", status: "deployed", tone: "success" },
+      { event: "PR Created", environment: "stage", time: "2026-06-11 08:30", status: "open", tone: "info" },
+      { event: "Approved", environment: "stage", time: "2026-06-11 08:48", status: "approved", tone: "success" },
+      { event: "Merged", environment: "stage", time: "2026-06-11 08:50", status: "merged", tone: "success" },
+      { event: "Deployed Stage", environment: "stage", time: "2026-06-11 08:54", status: "deployed", tone: "success" },
+      { event: "PR Created", environment: "prod", time: "2026-06-11 09:00", status: "open", tone: "info" },
+      { event: "Approved", environment: "prod", time: "2026-06-11 09:10", status: "approved", tone: "success" },
+      { event: "Merged", environment: "prod", time: "2026-06-11 09:12", status: "merged", tone: "success" },
+      { event: "Production", environment: "prod", time: "2026-06-11 09:18", status: "deployed", tone: "success" }
     ]
   },
   {
     serviceId: "checkout-service",
+    repositoryOwner: "acme",
+    repositoryName: "checkout-service",
     environments: [
-      { environment: "dev", version: "v2.7.4", status: "Ready", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Team Lead", approvedBy: "Andre Patel", promotedAt: "2026-06-11 06:12" },
-      { environment: "stage", version: "v2.7.3", status: "Canary paused", tone: "warning", promotionEligibility: "Blocked", requiredApproval: "Production approval", approvedBy: "Pending", promotedAt: "Pending" },
-      { environment: "prod", version: "v2.7.1", status: "Stable", tone: "success", promotionEligibility: "Rollback target", requiredApproval: "Completed", approvedBy: "Andre Patel", promotedAt: "2026-06-07 10:19" }
+      { environment: "dev", version: "v2.7.4", sha: "fd80a12", status: "Deployed", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Lead approval by PR", approvedBy: "CI automation", promotedAt: "2026-06-11 06:12", deployed: true },
+      { environment: "stage", version: "v2.7.3", sha: "fd80a11", status: "Canary paused", tone: "warning", promotionEligibility: "Blocked", requiredApproval: "Production approval by PR", approvedBy: "Pending", promotedAt: "Pending", deployed: true },
+      { environment: "prod", version: "v2.7.1", sha: "b721cd0", status: "Stable", tone: "success", promotionEligibility: "Rollback target", requiredApproval: "Completed", approvedBy: "Andre Patel", promotedAt: "2026-06-07 10:19", deployed: true }
     ],
     history: [
-      { from: "dev", to: "stage", version: "v2.7.3", status: "needs approval", approvedBy: "Pending", promotedAt: "Pending" },
-      { from: "stage", to: "prod", version: "v2.7.1", status: "completed", approvedBy: "Andre Patel", promotedAt: "2026-06-07 10:19" }
+      { from: "dev", to: "stage", version: "v2.7.3", sha: "fd80a11", status: "needs approval", approvedBy: "Pending", promotedAt: "Pending", prUrl: "https://github.com/acme/checkout-service/pull/88", approvalStatus: "pending", mergeStatus: "open", deployed: false },
+      { from: "stage", to: "prod", version: "v2.7.1", sha: "b721cd0", status: "completed", approvedBy: "Andre Patel", promotedAt: "2026-06-07 10:19", prUrl: "https://github.com/acme/checkout-service/pull/84", approvalStatus: "approved", mergeStatus: "merged", deployed: true }
+    ],
+    timeline: [
+      { event: "Built", environment: "dev", time: "2026-06-11 06:01", status: "succeeded", tone: "success" },
+      { event: "Scanned", environment: "dev", time: "2026-06-11 06:06", status: "passed", tone: "success" },
+      { event: "Signed", environment: "dev", time: "2026-06-11 06:08", status: "signed", tone: "success" },
+      { event: "Deployed Dev", environment: "dev", time: "2026-06-11 06:12", status: "deployed", tone: "success" },
+      { event: "PR Created", environment: "stage", time: "2026-06-11 06:18", status: "open", tone: "info" },
+      { event: "Approved", environment: "stage", time: "Pending", status: "pending", tone: "warning" },
+      { event: "Merged", environment: "stage", time: "Pending", status: "waiting", tone: "neutral" },
+      { event: "Deployed Stage", environment: "stage", time: "Pending", status: "waiting", tone: "neutral" },
+      { event: "Production", environment: "prod", time: "Pending", status: "blocked", tone: "warning" }
     ]
   },
   {
     serviceId: "catalog-api",
+    repositoryOwner: "acme",
+    repositoryName: "catalog-api",
     environments: [
-      { environment: "dev", version: "v3.2.1", status: "Ready", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Developer", approvedBy: "Sam Rivera", promotedAt: "2026-06-10 15:40" },
-      { environment: "stage", version: "v3.2.0", status: "Drift warning", tone: "drift", promotionEligibility: "Blocked by drift", requiredApproval: "Team Lead", approvedBy: "Pending", promotedAt: "Pending" },
-      { environment: "prod", version: "v3.1.8", status: "Stable", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Sam Rivera", promotedAt: "2026-06-08 11:22" }
+      { environment: "dev", version: "v3.2.1", sha: "de92a44", status: "Deployed", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Lead approval by PR", approvedBy: "CI automation", promotedAt: "2026-06-10 15:40", deployed: true },
+      { environment: "stage", version: "v3.2.0", sha: "ab12f90", status: "Drift warning", tone: "drift", promotionEligibility: "Blocked by drift", requiredApproval: "Team Lead", approvedBy: "Pending", promotedAt: "Pending", deployed: true },
+      { environment: "prod", version: "v3.1.8", sha: "aa90cd1", status: "Stable", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Sam Rivera", promotedAt: "2026-06-08 11:22", deployed: true }
     ],
     history: [
-      { from: "dev", to: "stage", version: "v3.2.0", status: "completed", approvedBy: "Sam Rivera", promotedAt: "2026-06-10 16:42" }
+      { from: "dev", to: "stage", version: "v3.2.0", sha: "ab12f90", status: "completed", approvedBy: "Sam Rivera", promotedAt: "2026-06-10 16:42", prUrl: "https://github.com/acme/catalog-api/pull/57", approvalStatus: "approved", mergeStatus: "merged", deployed: true }
+    ],
+    timeline: [
+      { event: "Built", environment: "dev", time: "2026-06-10 15:22", status: "succeeded", tone: "success" },
+      { event: "Scanned", environment: "dev", time: "2026-06-10 15:30", status: "passed", tone: "success" },
+      { event: "Signed", environment: "dev", time: "2026-06-10 15:33", status: "signed", tone: "success" },
+      { event: "Deployed Dev", environment: "dev", time: "2026-06-10 15:40", status: "deployed", tone: "success" },
+      { event: "PR Created", environment: "stage", time: "2026-06-10 16:05", status: "open", tone: "info" },
+      { event: "Approved", environment: "stage", time: "2026-06-10 16:20", status: "approved", tone: "success" },
+      { event: "Merged", environment: "stage", time: "2026-06-10 16:28", status: "merged", tone: "success" },
+      { event: "Deployed Stage", environment: "stage", time: "2026-06-10 16:42", status: "drift warning", tone: "drift" },
+      { event: "Production", environment: "prod", time: "Pending", status: "blocked", tone: "warning" }
     ]
   },
   {
     serviceId: "idp-portal",
+    repositoryOwner: "acme",
+    repositoryName: "idp-portal",
     environments: [
-      { environment: "dev", version: "v0.1.0", status: "Building", tone: "info", promotionEligibility: "Waiting for build", requiredApproval: "Team Lead", approvedBy: "Pending", promotedAt: "Pending" },
-      { environment: "stage", version: "v0.0.9", status: "Ready", tone: "success", promotionEligibility: "Eligible for prod", requiredApproval: "Team Lead", approvedBy: "Avery Morgan", promotedAt: "2026-06-10 09:00" },
-      { environment: "prod", version: "v0.0.8", status: "Stable", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Avery Morgan", promotedAt: "2026-06-09 09:00" }
+      { environment: "dev", version: "v0.1.0", sha: "1dbe991", status: "Building", tone: "info", promotionEligibility: "Waiting for build", requiredApproval: "Lead approval by PR", approvedBy: "Pending", promotedAt: "Pending", deployed: false },
+      { environment: "stage", version: "v0.0.9", sha: "bd0a918", status: "Ready", tone: "success", promotionEligibility: "Eligible for prod", requiredApproval: "Production approval by PR", approvedBy: "Avery Morgan", promotedAt: "2026-06-10 09:00", deployed: true },
+      { environment: "prod", version: "v0.0.8", sha: "a18c030", status: "Stable", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Avery Morgan", promotedAt: "2026-06-09 09:00", deployed: true }
     ],
     history: [
-      { from: "dev", to: "stage", version: "v0.0.9", status: "completed", approvedBy: "Avery Morgan", promotedAt: "2026-06-10 09:00" }
+      { from: "dev", to: "stage", version: "v0.0.9", sha: "bd0a918", status: "completed", approvedBy: "Avery Morgan", promotedAt: "2026-06-10 09:00", prUrl: "https://github.com/acme/idp-portal/pull/19", approvalStatus: "approved", mergeStatus: "merged", deployed: true }
+    ],
+    timeline: [
+      { event: "Built", environment: "dev", time: "2026-06-11 10:22", status: "running", tone: "info" },
+      { event: "Scanned", environment: "dev", time: "Pending", status: "waiting", tone: "neutral" },
+      { event: "Signed", environment: "dev", time: "Pending", status: "waiting", tone: "neutral" },
+      { event: "Deployed Dev", environment: "dev", time: "Pending", status: "waiting", tone: "neutral" },
+      { event: "PR Created", environment: "stage", time: "Pending", status: "waiting", tone: "neutral" },
+      { event: "Production", environment: "prod", time: "Pending", status: "not started", tone: "neutral" }
     ]
   },
   {
     serviceId: "orders-worker",
+    repositoryOwner: "acme",
+    repositoryName: "orders-worker",
     environments: [
-      { environment: "dev", version: "v0.9.7", status: "Ready", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Team Lead", approvedBy: "Nora Ali", promotedAt: "2026-06-10 12:15" },
-      { environment: "stage", version: "v0.9.6", status: "Failed", tone: "danger", promotionEligibility: "Blocked", requiredApproval: "Policy remediation", approvedBy: "Pending", promotedAt: "Pending" },
-      { environment: "prod", version: "v0.9.4", status: "Stable", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Nora Ali", promotedAt: "2026-06-04 13:08" }
+      { environment: "dev", version: "v0.9.7", sha: "90be441", status: "Deployed", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Lead approval by PR", approvedBy: "CI automation", promotedAt: "2026-06-10 12:15", deployed: true },
+      { environment: "stage", version: "v0.9.6", sha: "0bc44ea", status: "Failed", tone: "danger", promotionEligibility: "Blocked", requiredApproval: "Policy remediation", approvedBy: "Pending", promotedAt: "Pending", deployed: false },
+      { environment: "prod", version: "v0.9.4", sha: "1f800de", status: "Stable", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Nora Ali", promotedAt: "2026-06-04 13:08", deployed: true }
     ],
     history: [
-      { from: "dev", to: "stage", version: "v0.9.6", status: "blocked", approvedBy: "Policy engine", promotedAt: "2026-06-10 14:03" }
+      { from: "dev", to: "stage", version: "v0.9.6", sha: "0bc44ea", status: "rejected", approvedBy: "Policy engine", promotedAt: "2026-06-10 14:03", prUrl: "https://github.com/acme/orders-worker/pull/33", approvalStatus: "rejected", mergeStatus: "rejected", deployed: false, rejectedReason: "Required labels policy failed." }
+    ],
+    timeline: [
+      { event: "Built", environment: "dev", time: "2026-06-10 12:03", status: "succeeded", tone: "success" },
+      { event: "Scanned", environment: "dev", time: "2026-06-10 12:08", status: "passed", tone: "success" },
+      { event: "Signed", environment: "dev", time: "2026-06-10 12:10", status: "signed", tone: "success" },
+      { event: "Deployed Dev", environment: "dev", time: "2026-06-10 12:15", status: "deployed", tone: "success" },
+      { event: "PR Created", environment: "stage", time: "2026-06-10 13:22", status: "open", tone: "info" },
+      { event: "Approved", environment: "stage", time: "2026-06-10 14:03", status: "rejected", tone: "danger" },
+      { event: "Merged", environment: "stage", time: "N/A", status: "rejected", tone: "danger" },
+      { event: "Deployed Stage", environment: "stage", time: "N/A", status: "not deployed", tone: "danger" },
+      { event: "Production", environment: "prod", time: "Pending", status: "blocked", tone: "warning" }
     ]
   }
 ];
@@ -1018,6 +1104,11 @@ export const disasterRecoveryRecords = [
 ];
 
 export const auditLogs = [
+  { actor: "Promotion workflow", action: "promotion.requested", target: "Payments API prod 9ad31c2", result: "succeeded", time: "55 min ago" },
+  { actor: "Maya Chen", action: "promotion.approved", target: "Payments API prod PR #142", result: "succeeded", time: "50 min ago" },
+  { actor: "ArgoCD", action: "promotion.deployed", target: "Payments API production 9ad31c2", result: "succeeded", time: "47 min ago" },
+  { actor: "Promotion workflow", action: "promotion.requested", target: "Checkout Service stage fd80a11", result: "pending", time: "2 hrs ago" },
+  { actor: "Policy engine", action: "promotion.rejected", target: "Orders Worker stage 0bc44ea", result: "failed", time: "2 hrs ago" },
   { actor: "Nora Ali", action: "service created", target: "Orders Worker", result: "succeeded", time: "31 min ago" },
   { actor: "Maya Chen", action: "deployment triggered", target: "Payments API prod v1.18.4", result: "succeeded", time: "12 min ago" },
   { actor: "Andre Patel", action: "rollback requested", target: "Checkout Service prod to v2.7.1", result: "pending", time: "2 hrs ago" },
