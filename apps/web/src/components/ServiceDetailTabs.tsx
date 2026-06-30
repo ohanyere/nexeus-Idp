@@ -9,6 +9,7 @@ const tabs = [
  { label: "Topology", hash: "topology" },
  { label: "Release Timeline", hash: "release-timeline" },
  { label: "Resources", hash: "resources" },
+ { label: "Policy", hash: "policy" },
  { label: "Releases", hash: "releases" },
  { label: "Audit", hash: "audit" }
 ];

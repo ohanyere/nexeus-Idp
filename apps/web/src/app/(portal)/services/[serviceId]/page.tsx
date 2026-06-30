@@ -1,6 +1,7 @@
 import { DataTable } from "@/components/DataTable";
 import { RollbackButton, ViewLogsButton } from "@/components/DeploymentActions";
 import { EnvironmentPromotion } from "@/components/EnvironmentPromotion";
+import { ServicePolicyCompactStatus, ServicePolicyPanel } from "@/components/GovernanceViews";
 import { OwnershipGraph } from "@/components/OwnershipGraph";
 import { PageHeader } from "@/components/PageHeader";
 import { ProvisionResourceButton } from "@/components/ProvisionResourceButton";
@@ -130,6 +131,7 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  <div className="flex flex-wrap items-center gap-2">
  <StatusBadge label={service.healthStatus} tone={service.healthTone} />
  <StatusBadge label={service.deploymentStatus} tone={service.deploymentTone} />
+ <ServicePolicyCompactStatus serviceId={service.id} />
  {service.environments.map((environment) => (
  <span key={environment} className="rounded-md border border-line bg-canvas px-2 py-0.5 text-xs font-medium text-slate-700">{environment}</span>
  ))}
@@ -204,6 +206,10 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
 
  <section id="resources" className="scroll-mt-16">
  <ServiceResourceExplorer inventory={resourceInventory} />
+ </section>
+
+ <section id="policy" className="scroll-mt-16">
+ <ServicePolicyPanel serviceId={service.id} />
  </section>
 
  <article>
