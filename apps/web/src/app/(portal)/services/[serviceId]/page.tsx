@@ -3,6 +3,7 @@ import { RollbackButton, ViewLogsButton } from "@/components/DeploymentActions";
 import { EnvironmentPromotion } from "@/components/EnvironmentPromotion";
 import { OwnershipGraph } from "@/components/OwnershipGraph";
 import { PageHeader } from "@/components/PageHeader";
+import { ProvisionResourceButton } from "@/components/ProvisionResourceButton";
 import { ReleaseTimelinePanel } from "@/components/ReleaseTimelinePanel";
 import { ServiceDetailTabs } from "@/components/ServiceDetailTabs";
 import { ServiceResourceExplorer } from "@/components/ServiceResourceExplorer";
@@ -118,6 +119,7 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  eyebrow="Service intelligence"
  title={service.name}
  description={service.description}
+ action={<ProvisionResourceButton serviceId={service.id} serviceName={service.name} label="Provision Resource" />}
  />
 
  <ServiceDetailTabs serviceId={service.id} />

@@ -55,7 +55,7 @@ export type NavItem = {
   name: string;
   href: string;
   icon: LucideIcon;
-  group: "Platform" | "Catalog" | "Operations" | "Governance" | "Admin";
+  group: "Platform" | "Catalog" | "Infrastructure" | "Operations" | "Governance" | "Admin";
   permission?: Permission;
 };
 
@@ -181,6 +181,10 @@ export const navigation: NavItem[] = [
   { name: "Services", href: "/services", icon: ServerCog, group: "Catalog" },
   { name: "Templates", href: "/templates", icon: LibraryBig, group: "Catalog" },
   { name: "Resources", href: "/resources", icon: Boxes, group: "Catalog" },
+  { name: "Resource Catalog", href: "/infrastructure/resource-catalog", icon: Database, group: "Infrastructure", permission: "create resource" },
+  { name: "Provision Requests", href: "/infrastructure/provision-requests", icon: Workflow, group: "Infrastructure", permission: "create resource" },
+  { name: "Provisioned Resources", href: "/infrastructure/provisioned-resources", icon: Boxes, group: "Infrastructure" },
+  { name: "Resource Templates", href: "/infrastructure/resource-templates", icon: LibraryBig, group: "Infrastructure", permission: "create resource" },
   { name: "Deployments", href: "/deployments", icon: Rocket, group: "Operations" },
   { name: "Platform Health", href: "/platform-health", icon: HeartPulse, group: "Operations" },
   { name: "Costs", href: "/costs", icon: CircleDollarSign, group: "Operations" },

@@ -22,7 +22,7 @@ export function Topbar() {
  <div className="flex min-h-14 min-w-0 flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-5 lg:px-6">
  <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-canvas px-3 py-1.5 text-xs text-muted lg:max-w-md">
  <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
- <span className="truncate">Search services, teams, deployments, resources</span>
+ <span className="truncate">Search services, teams, deployments, resources, templates, requests</span>
  </div>
  <div className="flex min-w-0 flex-wrap items-center gap-3">
  <label className="hidden gap-1 text-xs font-medium text-muted xl:grid">

@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { navigation } from "@/lib/mock-data";
 import { useMockSession } from "@/components/MockSessionContext";
 
-const navigationGroups = ["Platform", "Catalog", "Operations", "Governance", "Admin"] as const;
+const navigationGroups = ["Platform", "Catalog", "Infrastructure", "Operations", "Governance", "Admin"] as const;
 
 export function AppSidebar() {
  const pathname = usePathname();
