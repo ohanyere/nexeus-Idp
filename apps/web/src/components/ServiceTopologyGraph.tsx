@@ -1,4 +1,5 @@
-import { TopologyFlow } from "@/components/TopologyFlow";
+import { TopologyGraph } from "@/components/topology/TopologyGraph";
+import { getTopologyByServiceId } from "@/components/topology/mockTopology";
 import type { Service } from "@/lib/mock-data";
 
 type ServiceTopologyGraphProps = {
@@ -6,11 +7,5 @@ type ServiceTopologyGraphProps = {
 };
 
 export function ServiceTopologyGraph({ service }: ServiceTopologyGraphProps) {
- return (
- <TopologyFlow
- services={[service]}
- title="Service topology"
- height="360px"
- />
- );
+ return <TopologyGraph topology={getTopologyByServiceId(service.id)} />;
 }

@@ -3,10 +3,12 @@ import { RollbackButton, ViewLogsButton } from "@/components/DeploymentActions";
 import { EnvironmentPromotion } from "@/components/EnvironmentPromotion";
 import { OwnershipGraph } from "@/components/OwnershipGraph";
 import { PageHeader } from "@/components/PageHeader";
+import { ServiceDetailTabs } from "@/components/ServiceDetailTabs";
 import { ServiceTopologyGraph } from "@/components/ServiceTopologyGraph";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getPersistedService, toCatalogApiService } from "@/lib/server/catalog";
 import {
+ auditLogs,
  deployments,
  getPromotionByServiceId,
  getScorecardByServiceId,
@@ -101,6 +103,16 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  { type: "Event docs", link: <MockDocLink href={service.documentation.eventDocs} />, owner: service.documentation.owner }
  ];
 
+ const auditRows = auditLogs
+ .filter((log) => log.target.toLowerCase().includes(service.name.toLowerCase()) || log.target.toLowerCase().includes(service.id.replace("-", " ")))
+ .map((log) => ({
+ actor: log.actor,
+ action: log.action,
+ target: log.target,
+ result: <StatusBadge label={log.result} tone={statusTone(log.result)} />,
+ time: log.time
+ }));
+
  return (
  <>
  <PageHeader
@@ -109,7 +121,9 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  description={service.description}
  />
 
- <section className="console-panel rounded-md p-4">
+ <ServiceDetailTabs serviceId={service.id} />
+
+ <section id="overview" className="scroll-mt-16 console-panel rounded-md p-4">
  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
  <div className="min-w-0">
  <div className="flex flex-wrap items-center gap-2">
@@ -135,9 +149,11 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  </div>
  </section>
 
+ <section id="topology" className="scroll-mt-16 overflow-x-auto">
  <ServiceTopologyGraph service={service} />
+ </section>
 
- <section className="grid gap-6 xl:grid-cols-2">
+ <section className="grid scroll-mt-16 gap-6 xl:grid-cols-2">
  <OwnershipGraph teamName={service.team} services={teamServices} resources={serviceResources} />
  <article className="console-panel rounded-md p-4">
  <h2 className="font-heading text-base font-semibold text-ink">Ownership</h2>
@@ -166,7 +182,9 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  </article>
  </section>
 
+ <section id="releases" className="scroll-mt-16">
  {promotion ? <EnvironmentPromotion promotion={promotion} /> : null}
+ </section>
 
  <section className="grid gap-6">
  <article>
@@ -174,7 +192,7 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  <DataTable columns={["version", "environment", "status", "commit SHA", "image tag", "deployed at", "strategy", "rollback", "logs"]} rows={serviceDeployments} />
  </article>
 
- <article>
+ <article id="resources" className="scroll-mt-16">
  <h2 className="mb-3 font-heading text-lg font-semibold text-ink">Resources</h2>
  <DataTable columns={["name", "type", "environment", "status"]} rows={resourceRows} />
  </article>
@@ -192,6 +210,11 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  <article>
  <h2 className="mb-3 font-heading text-lg font-semibold text-ink">Documentation</h2>
  <DataTable columns={["type", "link", "owner"]} rows={documentationRows} />
+ </article>
+
+ <article id="audit" className="scroll-mt-16">
+ <h2 className="mb-3 font-heading text-lg font-semibold text-ink">Audit</h2>
+ <DataTable columns={["actor", "action", "target", "result", "time"]} rows={auditRows.length ? auditRows : [{ actor: "Audit log", action: "No service events registered", target: service.name, result: <StatusBadge label="none" tone="neutral" />, time: "N/A" }]} />
  </article>
 
  {detailedScorecard ? (
