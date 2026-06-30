@@ -9,11 +9,11 @@ export default function PortalLayout({
 }>) {
  return (
  <MockSessionProvider>
- <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-transparent">
+ <div className="min-h-screen w-full overflow-x-auto bg-transparent">
  <AppSidebar />
- <div className="min-w-0 max-w-full lg:pl-64">
+ <div className="min-w-0 lg:pl-64">
  <Topbar />
- <main className="mx-auto flex w-full min-w-0 max-w-[1480px] flex-col gap-5 overflow-x-hidden px-4 py-5 sm:px-5 lg:px-6">
+ <main className="mx-auto flex w-full min-w-0 max-w-none flex-col gap-5 overflow-visible px-4 py-5 sm:px-5 lg:px-6">
  {children}
  </main>
  </div>

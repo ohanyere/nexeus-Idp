@@ -181,7 +181,7 @@ function dotColor(tone: StatusTone) {
  success: "bg-emerald-600",
  warning: "bg-amber-600",
  danger: "bg-red-600",
- info: "bg-blue-600",
+ info: "bg-slate-500",
  drift: "bg-violet-600",
  neutral: "bg-slate-500"
  };

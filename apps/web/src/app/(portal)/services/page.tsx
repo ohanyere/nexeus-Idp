@@ -148,14 +148,14 @@ export default function ServicesPage() {
  });
 
  return (
- <>
+ <div className="grid min-w-[1080px] max-w-none gap-5">
  <PageHeader
  title="Services"
  description="Catalog records with ownership, runtime posture, deployment state, dependencies, and resource relationships."
  action={
  <Link
  href="/services/create"
- className="inline-flex h-9 items-center gap-2 rounded-md border border-line bg-white px-3 text-xs font-semibold text-slate-800 hover:bg-canvas"
+ className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-950 bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800"
  >
  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
  Create Service
@@ -197,19 +197,19 @@ export default function ServicesPage() {
  </div>
  </section>
 
- <section className="console-panel overflow-hidden rounded-md">
+ <section className="console-panel overflow-visible rounded-md">
  <div className="border-b border-line px-4 py-3">
  <h2 className="font-heading text-base font-semibold text-ink">Service catalog</h2>
  <p className="mt-1 text-xs text-muted">Dense summary records; open a service for topology, deployments, resources, and scorecards.</p>
  </div>
- <div className="divide-y divide-line">
+ <div className="min-w-[1040px] divide-y divide-line">
  {filteredServices.map((service) => {
  const resources = getServiceResources(service.id);
 
  return (
  <article key={service.id} className="grid gap-3 px-4 py-3 hover:bg-canvas xl:grid-cols-[minmax(0,1.5fr)_180px_210px_180px] xl:items-center">
  <div className="min-w-0">
- <Link href={`/services/${service.id}`} className="font-heading text-sm font-semibold text-brand hover:underline">
+ <Link href={`/services/${service.id}`} className="font-heading text-sm font-semibold text-slate-950 hover:underline">
  {service.name}
  </Link>
  <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">{service.description}</p>
@@ -235,7 +235,7 @@ export default function ServicesPage() {
  })}
  </div>
  </section>
- </>
+ </div>
  );
 }
 

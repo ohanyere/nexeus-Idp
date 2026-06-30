@@ -3,8 +3,8 @@ import { FeedbackProvider } from "@/components/FeedbackProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
- title: "Senior IDP Platform",
- description: "Phase 1 Internal Developer Platform portal"
+ title: "Nexus Platform",
+ description: "Internal Developer Platform"
 };
 
 export default function RootLayout({

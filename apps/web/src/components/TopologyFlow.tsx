@@ -13,7 +13,7 @@ const toneBorder: Record<StatusTone, string> = {
  success: "#2da44e",
  warning: "#bf8700",
  danger: "#cf222e",
- info: "#0969da",
+ info: "#57606a",
  drift: "#8250df",
  neutral: "#8c959f"
 };

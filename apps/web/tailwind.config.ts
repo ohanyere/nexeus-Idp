@@ -11,9 +11,9 @@ const config: Config = {
       colors: {
         ink: "#111827",
         muted: "#64748b",
-        canvas: "#f6f8fa",
+        canvas: "#f8fafc",
         line: "#d0d7de",
-        brand: "#0969da",
+        brand: "#111827",
         success: "#15803d",
         warning: "#b45309",
         danger: "#b91c1c",

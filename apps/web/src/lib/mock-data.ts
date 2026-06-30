@@ -187,10 +187,10 @@ export const navigation: NavItem[] = [
 ];
 
 export const mockTenantTeams = [
-  { id: "platform-team", name: "Platform Team", tenant: "Senior Platform Demo", scope: "All services, policies, templates, and environments" },
-  { id: "payments-team", name: "Payments Team", tenant: "Senior Platform Demo", scope: "Payments services, payment resources, and production approvals" },
-  { id: "inventory-team", name: "Inventory Team", tenant: "Senior Platform Demo", scope: "Catalog and inventory service subset" },
-  { id: "growth-team", name: "Growth Team", tenant: "Senior Platform Demo", scope: "Experiment, frontend, and customer growth services" }
+  { id: "platform-team", name: "Platform Team", tenant: "Nexus Platform Demo", scope: "All services, policies, templates, and environments" },
+  { id: "payments-team", name: "Payments Team", tenant: "Nexus Platform Demo", scope: "Payments services, payment resources, and production approvals" },
+  { id: "inventory-team", name: "Inventory Team", tenant: "Nexus Platform Demo", scope: "Catalog and inventory service subset" },
+  { id: "growth-team", name: "Growth Team", tenant: "Nexus Platform Demo", scope: "Experiment, frontend, and customer growth services" }
 ];
 
 export const mockRoles: MockRole[] = ["Platform Admin", "Team Lead", "Developer", "Viewer"];
@@ -1129,7 +1129,7 @@ export const auditLogs = [
 ];
 
 export const settings = [
-  { name: "Tenant", value: "Senior Platform Demo" },
+  { name: "Tenant", value: "Nexus Platform Demo" },
   { name: "Environments", value: "dev, stage, prod" },
   { name: "Authentication", value: "Mock session" },
   { name: "Integrations", value: "Configured as placeholders only" }
