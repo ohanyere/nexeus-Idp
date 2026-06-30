@@ -25,6 +25,11 @@ export type MockAuthSession = {
   expires: string;
 };
 
+export type StoredMockSession = {
+  userId: string;
+  provider: AuthProviderId;
+};
+
 export type TeamMember = AuthenticatedUser & {
   slack: string;
 };
@@ -102,15 +107,61 @@ export const mockApiKeys: ApiKeyRecord[] = [
   { id: "key-automation", name: "Team automation", scope: "services:create resources:read", created: "2026-05-20", lastUsed: "2 hrs ago", status: "Rotating" }
 ];
 
-export function createMockSession(userId = "user-avery"): MockAuthSession {
+export const mockSessionStorageKey = "nexus-platform.mock-session";
+
+export function createMockSession(userId = "user-avery", authenticated = true, provider: AuthProviderId = "email"): MockAuthSession {
   const user = mockUsers.find((candidate) => candidate.id === userId) ?? mockUsers[0];
 
   return {
     user,
-    authenticated: true,
-    provider: "email",
+    authenticated,
+    provider,
     expires: "2026-07-01T00:00:00.000Z"
   };
+}
+
+export function activateMockSession(userId = "user-avery", provider: AuthProviderId = "email") {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const session: StoredMockSession = { userId, provider };
+  window.localStorage.setItem(mockSessionStorageKey, JSON.stringify(session));
+}
+
+export function readStoredMockSession(): StoredMockSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(mockSessionStorageKey);
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredMockSession>;
+
+    if (!parsed.userId || !parsed.provider) {
+      return null;
+    }
+
+    return {
+      userId: parsed.userId,
+      provider: parsed.provider
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function clearMockSession() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(mockSessionStorageKey);
 }
 
 export function getTeamProfile(teamId: string) {

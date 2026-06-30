@@ -1,10 +1,10 @@
 "use client";
 
-import { createMockSession, mockUsers } from "@/lib/auth";
-import type { AuthenticatedUser, MockAuthSession } from "@/lib/auth";
+import { clearMockSession, createMockSession, mockUsers, readStoredMockSession } from "@/lib/auth";
+import type { AuthenticatedUser, AuthProviderId, MockAuthSession } from "@/lib/auth";
 import { rolePermissions, teams } from "@/lib/mock-data";
 import type { MockRole, Permission } from "@/lib/mock-data";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 type MockSessionContextValue = {
@@ -14,6 +14,7 @@ type MockSessionContextValue = {
  selectedRole: MockRole;
  setSelectedRole: (role: MockRole) => void;
  session: MockAuthSession;
+ sessionReady: boolean;
  user: AuthenticatedUser;
  users: AuthenticatedUser[];
  setUserId: (userId: string) => void;
@@ -25,9 +26,27 @@ const MockSessionContext = createContext<MockSessionContextValue | null>(null);
 
 export function MockSessionProvider({ children }: { children: ReactNode }) {
  const [selectedUserId, setUserId] = useState("user-avery");
- const baseSession = createMockSession(selectedUserId);
- const [selectedTeamId, setSelectedTeamId] = useState(baseSession.user.teamId);
- const [selectedRole, setSelectedRole] = useState<MockRole>(baseSession.user.role);
+ const [authenticated, setAuthenticated] = useState(false);
+ const [provider, setProvider] = useState<AuthProviderId>("email");
+ const [sessionReady, setSessionReady] = useState(false);
+ const baseSession = createMockSession(selectedUserId, authenticated, provider);
+ const [selectedTeamId, setSelectedTeamId] = useState("platform-engineering");
+ const [selectedRole, setSelectedRole] = useState<MockRole>("Platform Admin");
+
+ useEffect(() => {
+ const stored = readStoredMockSession();
+
+ if (stored) {
+  const storedSession = createMockSession(stored.userId, true, stored.provider);
+  setUserId(stored.userId);
+  setProvider(stored.provider);
+  setSelectedTeamId(storedSession.user.teamId);
+  setSelectedRole(storedSession.user.role);
+  setAuthenticated(true);
+ }
+
+ setSessionReady(true);
+ }, []);
 
  const selectedTeam = teams.find((team) => team.id === selectedTeamId) ?? teams[0];
  const user = useMemo<AuthenticatedUser>(() => ({
@@ -49,12 +68,19 @@ export function MockSessionProvider({ children }: { children: ReactNode }) {
  selectedRole,
  setSelectedRole,
  session,
+ sessionReady,
  user,
  users: mockUsers,
  setUserId,
- signOut: () => undefined,
+ signOut: () => {
+  clearMockSession();
+  setAuthenticated(false);
+  if (typeof window !== "undefined") {
+  window.location.assign("/login");
+  }
+ },
  can: (permission: Permission) => rolePermissions[selectedRole].includes(permission)
- }), [selectedRole, selectedTeam, selectedTeamId, session, user]);
+ }), [selectedRole, selectedTeam, selectedTeamId, session, sessionReady, user]);
 
  return (
  <MockSessionContext.Provider value={value}>

@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/AppSidebar";
+import { AuthGate } from "@/components/AuthGate";
 import { MockSessionProvider } from "@/components/MockSessionContext";
 import { Topbar } from "@/components/Topbar";
 
@@ -9,6 +10,7 @@ export default function PortalLayout({
 }>) {
  return (
  <MockSessionProvider>
+ <AuthGate>
  <div className="min-h-screen w-full overflow-x-auto bg-transparent">
  <AppSidebar />
  <div className="min-w-0 lg:pl-64">
@@ -18,6 +20,7 @@ export default function PortalLayout({
  </main>
  </div>
  </div>
+ </AuthGate>
  </MockSessionProvider>
  );
 }

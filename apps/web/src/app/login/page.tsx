@@ -1,8 +1,19 @@
-import { authProviders } from "@/lib/auth";
+"use client";
+
+import { activateMockSession, authProviders } from "@/lib/auth";
+import type { AuthProviderId } from "@/lib/auth";
 import { SquareStack } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
+
+  function signIn(provider: AuthProviderId = "email") {
+    activateMockSession("user-avery", provider);
+    router.replace("/dashboard");
+  }
+
   return (
     <main className="min-h-screen bg-canvas px-4 py-10">
       <section className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-5xl items-center gap-8 lg:grid-cols-[minmax(0,0.95fr)_420px]">
@@ -25,7 +36,13 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <form className="console-panel rounded-md p-5">
+        <form
+          className="console-panel rounded-md p-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            signIn("email");
+          }}
+        >
           <div className="mb-5 lg:hidden">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-950 text-white">
@@ -56,9 +73,9 @@ export default function LoginPage() {
               </label>
               <Link href="/login" className="font-semibold text-slate-800 underline decoration-slate-300 underline-offset-2">Forgot password</Link>
             </div>
-            <Link href="/dashboard" className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">
+            <button type="submit" className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">
               Sign In
-            </Link>
+            </button>
           </div>
 
           <div className="my-5 flex items-center gap-3">
@@ -69,9 +86,9 @@ export default function LoginPage() {
 
           <div className="grid gap-2">
             {authProviders.map((provider) => (
-              <Link key={provider.id} href="/dashboard" className="inline-flex h-10 items-center justify-center rounded-md border border-line bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-canvas">
+              <button key={provider.id} type="button" onClick={() => signIn(provider.id)} className="inline-flex h-10 items-center justify-center rounded-md border border-line bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-canvas">
                 {provider.label}
-              </Link>
+              </button>
             ))}
           </div>
         </form>

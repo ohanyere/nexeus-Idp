@@ -11,7 +11,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 
 export function Topbar() {
- const { selectedTeam, selectedTeamId, setSelectedTeamId, selectedRole, setSelectedRole, user, can } = useMockSession();
+ const { selectedTeam, selectedTeamId, setSelectedTeamId, selectedRole, setSelectedRole, user, can, signOut } = useMockSession();
  const pathname = usePathname();
  const [menuOpen, setMenuOpen] = useState(false);
  const unread = mockNotifications.filter((notification) => notification.status === "Unread").length;
@@ -83,7 +83,10 @@ export function Topbar() {
  <MenuLink href="/settings">Settings</MenuLink>
  <MenuLink href="/settings/api-keys">API Keys</MenuLink>
  <MenuLink href="/notifications">Notifications</MenuLink>
- <MenuLink href="/login" icon={<LogOut className="h-4 w-4" />}>Logout</MenuLink>
+ <button type="button" onClick={signOut} className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-canvas hover:text-slate-950">
+ <LogOut className="h-4 w-4" aria-hidden="true" />
+ <span>Logout</span>
+ </button>
  </div>
  ) : null}
  </div>
