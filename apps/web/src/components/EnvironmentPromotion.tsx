@@ -273,6 +273,7 @@ export function EnvironmentPromotion({ promotion }: EnvironmentPromotionProps) {
  <p className="mt-1 text-sm text-muted">{promotion.repositoryOwner}/{promotion.repositoryName}</p>
  </div>
  <div className="flex flex-wrap gap-2">
+ {can("deploy to stage") ? (
  <PromotionButton
  label="Promote to Stage"
  targetEnvironment="stage"
@@ -280,6 +281,8 @@ export function EnvironmentPromotion({ promotion }: EnvironmentPromotionProps) {
  busy={busyAction?.action === "promote" && busyAction.targetEnvironment === "stage"}
  onClick={() => void promote("stage")}
  />
+ ) : null}
+ {can("deploy to prod") ? (
  <PromotionButton
  label="Promote to Production"
  targetEnvironment="prod"
@@ -287,6 +290,9 @@ export function EnvironmentPromotion({ promotion }: EnvironmentPromotionProps) {
  busy={busyAction?.action === "promote" && busyAction.targetEnvironment === "prod"}
  onClick={() => void promote("prod")}
  />
+ ) : null}
+ {can("rollback deployment") ? (
+ <>
  <RollbackButton
  label="Rollback Stage"
  targetEnvironment="stage"
@@ -301,6 +307,8 @@ export function EnvironmentPromotion({ promotion }: EnvironmentPromotionProps) {
  busy={busyAction?.action === "rollback" && busyAction.targetEnvironment === "prod"}
  onClick={() => void rollback("prod")}
  />
+ </>
+ ) : null}
  {openPullRequests[0]?.prUrl ? (
  <a
  href={openPullRequests[0].prUrl}

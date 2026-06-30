@@ -216,10 +216,13 @@ export function DeploymentPromotionActions({ service, owner, repo, onDetails, va
  const menuItemClass = variant === "dark"
  ? "flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
  : "flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs font-semibold text-slate-800 hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-50";
+ const canRelease = can("deploy to stage") || can("deploy to prod");
+ const canRollback = can("rollback deployment");
 
  return (
  <div className="grid min-w-[178px] justify-items-end gap-1.5">
  <div className="flex flex-wrap justify-end gap-2">
+ {canRelease ? (
  <div className="relative">
  <button
  type="button"
@@ -251,6 +254,8 @@ export function DeploymentPromotionActions({ service, owner, repo, onDetails, va
  </div>
  ) : null}
  </div>
+ ) : null}
+ {canRollback ? (
  <div className="relative">
  <button
  type="button"
@@ -282,6 +287,7 @@ export function DeploymentPromotionActions({ service, owner, repo, onDetails, va
  </div>
  ) : null}
  </div>
+ ) : null}
  </div>
  {lastPrUrl ? (
  <a href={lastPrUrl} target="_blank" rel="noreferrer" className={variant === "dark" ? "inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-950" : "inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-slate-900"}>

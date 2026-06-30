@@ -1,5 +1,6 @@
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { PageHeader } from "@/components/PageHeader";
+import { PersonalDashboard } from "@/components/PersonalDashboard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TopologyFlow } from "@/components/TopologyFlow";
 import {
@@ -23,10 +24,12 @@ export default function DashboardPage() {
  return (
  <>
  <PageHeader
- eyebrow="Operations"
- title="Platform overview"
- description="Current operational posture across platform dependencies, deployments, service health, governance alerts, and activity."
+ eyebrow="Personal workspace"
+ title="My Dashboard"
+ description="A personalized Nexus Platform landing page for your services, teams, approvals, deployments, notifications, and audit activity."
  />
+
+ <PersonalDashboard />
 
  <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
  <OperationalMetric

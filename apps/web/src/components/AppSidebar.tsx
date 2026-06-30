@@ -5,11 +5,14 @@ import { SquareStack } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navigation } from "@/lib/mock-data";
+import { useMockSession } from "@/components/MockSessionContext";
 
 const navigationGroups = ["Platform", "Catalog", "Operations", "Governance", "Admin"] as const;
 
 export function AppSidebar() {
  const pathname = usePathname();
+ const { can } = useMockSession();
+ const visibleNavigation = navigation.filter((item) => !item.permission || can(item.permission));
 
  return (
  <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-slate-200 bg-white text-slate-800 lg:flex lg:flex-col">
@@ -24,7 +27,11 @@ export function AppSidebar() {
  </div>
  <nav className="flex flex-1 flex-col gap-3 overflow-y-auto px-2 py-2.5">
  {navigationGroups.map((group) => {
- const items = navigation.filter((item) => item.group === group);
+ const items = visibleNavigation.filter((item) => item.group === group);
+
+ if (!items.length) {
+ return null;
+ }
 
  return (
  <div key={group}>

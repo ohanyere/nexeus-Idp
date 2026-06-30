@@ -5,6 +5,7 @@ import { DataTable } from "@/components/DataTable";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
+import { mockUsers } from "@/lib/auth";
 import { accessControlUsers, mockRoles, mockTenantTeams, rbacPermissions, rolePermissions } from "@/lib/mock-data";
 import type { MockRole, Permission } from "@/lib/mock-data";
 
@@ -34,6 +35,7 @@ export default function AccessControlPage() {
  const permissionRows = rbacPermissions.map((permission) => ({
  permission,
  "Platform Admin": permissionCell("Platform Admin", permission),
+ "Platform Engineer": permissionCell("Platform Engineer", permission),
  "Team Lead": permissionCell("Team Lead", permission),
  Developer: permissionCell("Developer", permission),
  Viewer: permissionCell("Viewer", permission)
@@ -47,8 +49,8 @@ export default function AccessControlPage() {
  />
 
  <section className="grid gap-4 md:grid-cols-4">
- <StatCard label="Users" value={String(accessControlUsers.length)} detail="Mock identities" />
- <StatCard label="Roles" value={String(mockRoles.length)} detail="Platform Admin, Team Lead, Developer, Viewer" />
+ <StatCard label="Users" value={String(mockUsers.length)} detail="Mock authenticated identities" />
+ <StatCard label="Roles" value={String(mockRoles.length)} detail="Admin, Engineer, Lead, Developer, Viewer" />
  <StatCard label="Permissions" value={String(rbacPermissions.length)} detail="Mock action grants" />
  <StatCard label="Current role" value={selectedRole} detail={selectedTeam.name} />
  </section>
@@ -67,7 +69,7 @@ export default function AccessControlPage() {
  </select>
  </label>
  <p className="mt-3 text-sm text-muted">
- Platform Admin can see all actions. Developer cannot deploy to prod. Viewer cannot create or deploy. Team Lead can approve stage/prod promotion.
+ Platform Admin can see all actions. Platform Engineer owns infrastructure without platform settings. Developer cannot deploy to prod. Viewer cannot create or deploy.
  </p>
  </section>
 
@@ -89,7 +91,7 @@ export default function AccessControlPage() {
 
  <article>
  <h2 className="mb-3 font-heading text-lg font-semibold text-ink">Permission matrix</h2>
- <DataTable columns={["permission", "Platform Admin", "Team Lead", "Developer", "Viewer"]} rows={permissionRows} />
+ <DataTable columns={["permission", "Platform Admin", "Platform Engineer", "Team Lead", "Developer", "Viewer"]} rows={permissionRows} />
  </article>
  </section>
  </>

@@ -21,6 +21,10 @@ export function RollbackButton({ deployment, compact = false }: RollbackButtonPr
 
  const target = deployment.previousStableVersions.find((version) => version.version === selectedVersion);
 
+ if (!can("rollback deployment")) {
+ return null;
+ }
+
  function handleRollbackRequest() {
  if (!can("rollback deployment")) {
  notifyError("Rollback request blocked", {
@@ -164,6 +168,10 @@ export function DeployNewVersionButton() {
 
  const requiredPermission: Permission = form.environment === "prod" ? "deploy to prod" : form.environment === "stage" ? "deploy to stage" : "deploy to dev";
  const allowed = can(requiredPermission);
+
+ if (!can("deploy to dev") && !can("deploy to stage") && !can("deploy to prod")) {
+ return null;
+ }
 
  return (
  <>

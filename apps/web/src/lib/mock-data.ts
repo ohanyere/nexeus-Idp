@@ -1,5 +1,6 @@
 import {
   Activity,
+  Bell,
   Boxes,
   CircleDollarSign,
   Cloud,
@@ -9,6 +10,7 @@ import {
   GitBranch,
   GitCompareArrows,
   HeartPulse,
+  KeyRound,
   LayoutDashboard,
   LibraryBig,
   LockKeyhole,
@@ -32,6 +34,7 @@ export type EnvironmentName = "dev" | "stage" | "prod";
 export type DeploymentType = "direct deploy" | "promotion from dev" | "promotion from stage" | "rollback";
 export type RolloutStrategy = "standard" | "canary";
 export type MaturityLevel = "basic" | "standard" | "production-ready";
+export type MockRole = "Platform Admin" | "Platform Engineer" | "Team Lead" | "Developer" | "Viewer";
 export type Permission =
   | "create service"
   | "create resource"
@@ -40,15 +43,20 @@ export type Permission =
   | "deploy to prod"
   | "approve production deployment"
   | "rollback deployment"
+  | "delete teams"
+  | "manage teams"
+  | "manage platform settings"
   | "view costs"
   | "manage policies"
-  | "manage templates";
+  | "manage templates"
+  | "view audit logs";
 
 export type NavItem = {
   name: string;
   href: string;
   icon: LucideIcon;
   group: "Platform" | "Catalog" | "Operations" | "Governance" | "Admin";
+  permission?: Permission;
 };
 
 export type Service = {
@@ -116,8 +124,6 @@ export type DeploymentRecord = {
   previousStableVersions: Array<{ version: string; commit: string; image: string; deployedAt: string }>;
 };
 
-export type MockRole = "Platform Admin" | "Team Lead" | "Developer" | "Viewer";
-
 export type PromotionEnvironment = EnvironmentName;
 
 export type PromotionApprovalStatus = "not required" | "pending" | "approved" | "rejected";
@@ -181,9 +187,11 @@ export const navigation: NavItem[] = [
   { name: "Scorecards", href: "/scorecards", icon: ShieldCheck, group: "Governance" },
   { name: "Drift Detection", href: "/drift", icon: GitCompareArrows, group: "Governance" },
   { name: "Disaster Recovery", href: "/disaster-recovery", icon: RotateCw, group: "Governance" },
-  { name: "Governance", href: "/governance", icon: ShieldCheck, group: "Governance" },
-  { name: "Audit Logs", href: "/audit-logs", icon: ScrollText, group: "Admin" },
-  { name: "Settings", href: "/settings", icon: Settings, group: "Admin" }
+  { name: "Governance", href: "/governance", icon: ShieldCheck, group: "Governance", permission: "manage policies" },
+  { name: "Audit Logs", href: "/audit-logs", icon: ScrollText, group: "Admin", permission: "view audit logs" },
+  { name: "Notifications", href: "/notifications", icon: Bell, group: "Admin" },
+  { name: "API Keys", href: "/settings/api-keys", icon: KeyRound, group: "Admin" },
+  { name: "Settings", href: "/settings", icon: Settings, group: "Admin", permission: "manage platform settings" }
 ];
 
 export const mockTenantTeams = [
@@ -193,7 +201,7 @@ export const mockTenantTeams = [
   { id: "growth-team", name: "Growth Team", tenant: "Nexus Platform Demo", scope: "Experiment, frontend, and customer growth services" }
 ];
 
-export const mockRoles: MockRole[] = ["Platform Admin", "Team Lead", "Developer", "Viewer"];
+export const mockRoles: MockRole[] = ["Platform Admin", "Platform Engineer", "Team Lead", "Developer", "Viewer"];
 
 export const rbacPermissions: Permission[] = [
   "create service",
@@ -203,13 +211,28 @@ export const rbacPermissions: Permission[] = [
   "deploy to prod",
   "approve production deployment",
   "rollback deployment",
+  "delete teams",
+  "manage teams",
+  "manage platform settings",
   "view costs",
   "manage policies",
-  "manage templates"
+  "manage templates",
+  "view audit logs"
 ];
 
 export const rolePermissions: Record<MockRole, Permission[]> = {
   "Platform Admin": rbacPermissions,
+  "Platform Engineer": [
+    "create service",
+    "create resource",
+    "deploy to dev",
+    "deploy to stage",
+    "rollback deployment",
+    "view costs",
+    "manage policies",
+    "manage templates",
+    "view audit logs"
+  ],
   "Team Lead": [
     "create service",
     "create resource",
@@ -217,7 +240,9 @@ export const rolePermissions: Record<MockRole, Permission[]> = {
     "deploy to stage",
     "approve production deployment",
     "rollback deployment",
-    "view costs"
+    "manage teams",
+    "view costs",
+    "view audit logs"
   ],
   Developer: ["create service", "deploy to dev", "deploy to stage"],
   Viewer: ["view costs"]
@@ -225,9 +250,10 @@ export const rolePermissions: Record<MockRole, Permission[]> = {
 
 export const accessControlUsers = [
   { name: "Avery Morgan", email: "avery.morgan@example.com", role: "Platform Admin", team: "Platform Team" },
+  { name: "Jordan Lee", email: "jordan.lee@example.com", role: "Platform Engineer", team: "Platform Team" },
   { name: "Maya Chen", email: "maya.chen@example.com", role: "Team Lead", team: "Payments Team" },
-  { name: "Nora Ali", email: "nora.ali@example.com", role: "Developer", team: "Inventory Team" },
-  { name: "Sam Rivera", email: "sam.rivera@example.com", role: "Viewer", team: "Growth Team" }
+  { name: "Nora Ali", email: "nora.ali@example.com", role: "Developer", team: "Commerce" },
+  { name: "Sam Rivera", email: "sam.rivera@example.com", role: "Viewer", team: "Developer Experience" }
 ];
 
 export const services: Service[] = [

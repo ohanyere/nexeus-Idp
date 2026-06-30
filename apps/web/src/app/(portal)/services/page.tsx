@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/PageHeader";
+import { useMockSession } from "@/components/MockSessionContext";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getServiceResources, services as mockServices } from "@/lib/mock-data";
@@ -78,6 +79,7 @@ function toServiceListItem(service: CatalogApiService): Service {
 }
 
 export default function ServicesPage() {
+ const { can } = useMockSession();
  const [query, setQuery] = useState("");
  const [teamFilter, setTeamFilter] = useState(allValue);
  const [environmentFilter, setEnvironmentFilter] = useState(allValue);
@@ -153,6 +155,7 @@ export default function ServicesPage() {
  title="Services"
  description="Catalog records with ownership, runtime posture, deployment state, dependencies, and resource relationships."
  action={
+ can("create service") ? (
  <Link
  href="/services/create"
  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-950 bg-slate-950 px-2.5 text-xs font-semibold text-white hover:bg-slate-800"
@@ -160,6 +163,7 @@ export default function ServicesPage() {
  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
  Create Service
  </Link>
+ ) : null
  }
  />
 
