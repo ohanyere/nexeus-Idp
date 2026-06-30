@@ -5,9 +5,12 @@ import type { StatusTone } from "@/lib/mock-data";
 import {
  Activity,
  AlertTriangle,
+ ArrowRight,
+ Check,
  ChevronDown,
  ChevronRight,
  Clock3,
+ Copy,
  ExternalLink,
  GitBranch,
  GitPullRequest,
@@ -101,6 +104,9 @@ type DrawerDetail = ReleaseActionDetail | {
  details: string;
  kind: "release-state";
  prUrl?: string;
+} | {
+ kind: "release";
+ release: ReleaseConsoleItem;
 };
 
 const environmentLabels: Record<EnvironmentName, string> = {
@@ -146,13 +152,13 @@ export function ReleaseManagementConsole({ releases, warning }: ReleaseManagemen
  const awaiting = releases.filter((release) => prState(release).key === "awaiting").length;
 
  return (
- <section className="relative min-w-[1180px] rounded-md border border-slate-200 bg-slate-50 p-4 text-slate-900 sm:p-5 lg:p-6">
+ <section className="relative min-w-[1120px] rounded-md border border-slate-200 bg-slate-50 p-3 text-slate-900 sm:p-4 lg:p-5">
  <div className="grid gap-5">
- <header className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
- <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+ <header className="rounded-md bg-white p-4 shadow-panel ring-1 ring-slate-200">
+ <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
  <div className="min-w-0">
  <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-slate-500">Release Management</p>
- <h1 className="mt-2 font-heading text-3xl font-semibold leading-tight text-slate-950">Releases</h1>
+ <h1 className="mt-2 font-heading text-2xl font-semibold leading-tight text-slate-950">Releases</h1>
  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Promote and rollback application releases across environments using GitOps.</p>
  </div>
  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -181,7 +187,7 @@ export function ReleaseManagementConsole({ releases, warning }: ReleaseManagemen
  ) : null}
  </header>
 
- <section className="rounded-md border border-slate-200 bg-white p-3">
+ <section className="rounded-md bg-white p-3 shadow-panel ring-1 ring-slate-200">
  <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_auto_auto] lg:items-center">
  <label className="flex min-w-0 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
  <Search className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
@@ -197,8 +203,8 @@ export function ReleaseManagementConsole({ releases, warning }: ReleaseManagemen
  </div>
  </section>
 
- <section className="overflow-visible rounded-md border border-slate-200 bg-white">
- <div className="hidden grid-cols-[42px_minmax(180px,1fr)_150px_minmax(170px,0.8fr)_minmax(360px,1.4fr)_150px_160px_240px] items-center gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500 xl:grid">
+ <section className="overflow-visible rounded-md bg-white shadow-panel ring-1 ring-slate-200">
+ <div className="hidden grid-cols-[36px_minmax(190px,1.15fr)_140px_minmax(150px,0.7fr)_minmax(280px,1fr)_128px_136px_204px] items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-slate-500 xl:grid">
  <span />
  <span>Service</span>
  <span>Team</span>
@@ -248,21 +254,22 @@ function ReleaseRow({
  <button
  type="button"
  onClick={onToggle}
- className="grid w-full gap-3 px-4 py-4 text-left transition hover:bg-slate-50 xl:grid-cols-[42px_minmax(180px,1fr)_150px_minmax(170px,0.8fr)_minmax(360px,1.4fr)_150px_160px_240px] xl:items-center xl:gap-4"
+ className="grid w-full gap-3 px-4 py-3 text-left transition hover:bg-slate-50 xl:grid-cols-[36px_minmax(190px,1.15fr)_140px_minmax(150px,0.7fr)_minmax(280px,1fr)_128px_136px_204px] xl:items-center xl:gap-3"
+ title="Expand service release details"
  >
- <span className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600">
+ <span className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-50 text-slate-600 ring-1 ring-slate-200">
  {expanded ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronRight className="h-4 w-4" aria-hidden="true" />}
  </span>
  <span className="min-w-0">
- <span className="block truncate text-sm font-semibold text-slate-950">{release.serviceName}</span>
+ <span className="block truncate text-[0.95rem] font-semibold text-slate-950">{release.serviceName}</span>
  <span className="mt-1 block truncate text-xs text-slate-500">{release.serviceId}</span>
  </span>
  <span className="text-xs font-medium text-slate-700">{release.teamName}</span>
- <span className="min-w-0 text-xs font-medium text-slate-700">
+ <span className="min-w-0 text-xs text-slate-600" title="Repository">
  <span className="block truncate">{release.repositoryOwner}/{release.repositoryName}</span>
  <span className="mt-1 block text-slate-500">{release.defaultBranch}</span>
  </span>
- <ReleasePipeline environments={release.environments} />
+ <ReleasePipeline release={release} />
  <span className="text-xs text-slate-400">{lastUpdate}</span>
  <PrStatus release={release} state={pr} />
  <span className="flex justify-start xl:justify-end" onClick={(event) => event.stopPropagation()}>
@@ -294,21 +301,21 @@ function ReleaseRow({
  </button>
  </div>
  ) : null}
- {expanded ? <ExpandedRelease release={release} /> : null}
+ {expanded ? <ExpandedRelease release={release} onDetails={onDetails} /> : null}
  </article>
  );
 }
 
-function ReleasePipeline({ environments }: { environments: ReleaseConsoleEnvironment[] }) {
+function ReleasePipeline({ release }: { release: ReleaseConsoleItem }) {
  return (
- <div className="grid gap-2 sm:grid-cols-[1fr_28px_1fr_28px_1fr] sm:items-center">
+ <div className="grid gap-1.5 sm:grid-cols-[72px_18px_72px_18px_72px] sm:items-center" title="Environment release pipeline">
  {(["dev", "stage", "prod"] as EnvironmentName[]).map((environment, index) => {
- const releaseEnvironment = environments.find((candidate) => candidate.environment === environment);
+ const releaseEnvironment = release.environments.find((candidate) => candidate.environment === environment);
 
  return (
  <div key={environment} className="contents">
- <EnvironmentNode environment={releaseEnvironment} name={environment} />
- {index < 2 ? <span className="hidden h-px bg-slate-300 sm:block" /> : null}
+ <EnvironmentNode release={release} environment={releaseEnvironment} name={environment} />
+ {index < 2 ? <span className="hidden items-center justify-center text-slate-400 sm:flex"><ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></span> : null}
  </div>
  );
  })}
@@ -316,16 +323,18 @@ function ReleasePipeline({ environments }: { environments: ReleaseConsoleEnviron
  );
 }
 
-function EnvironmentNode({ environment, name }: { environment?: ReleaseConsoleEnvironment; name: EnvironmentName }) {
+function EnvironmentNode({ release, environment, name }: { release: ReleaseConsoleItem; environment?: ReleaseConsoleEnvironment; name: EnvironmentName }) {
  const state = enterpriseState(environment?.status ?? "unknown");
+ const sha = environment?.sha ?? "unknown";
+ const commitUrl = sha === "unknown" ? undefined : `${release.repositoryUrl.replace(/\/$/, "")}/commit/${sha}`;
 
  return (
- <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
- <div className="flex items-center justify-between gap-2">
- <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-slate-500">{environmentLabels[name]}</span>
- <EnterpriseBadge label={state.label} tone={state.tone} />
+ <div className="group rounded-md bg-white px-2 py-1.5 ring-1 ring-slate-200" title={`${environmentLabels[name]} environment`}>
+ <div className="flex items-center justify-between gap-1">
+ <span className="text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-slate-500">{environmentLabels[name]}</span>
+ <StatusGlyph state={state} />
  </div>
- <p className="mt-2 truncate font-mono text-xs text-slate-800">{environment?.sha ?? "unknown"}</p>
+ <ShaInline sha={sha} commitUrl={commitUrl} />
  </div>
  );
 }
@@ -335,75 +344,98 @@ function PrStatus({ release, state }: { release: ReleaseConsoleItem; state: Retu
 
  if (openPullRequest) {
  return (
- <a href={openPullRequest.url} target="_blank" rel="noreferrer" className="inline-flex w-fit items-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 underline decoration-slate-300 underline-offset-2 hover:bg-slate-50" onClick={(event) => event.stopPropagation()}>
+ <a href={openPullRequest.url} target="_blank" rel="noreferrer" title="PR Status" className="inline-flex w-fit items-center gap-1.5 rounded-md bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-800 underline decoration-slate-300 underline-offset-2 ring-1 ring-slate-200 hover:bg-slate-100" onClick={(event) => event.stopPropagation()}>
  <GitPullRequest className="h-3.5 w-3.5" aria-hidden="true" />
  Open PR #{openPullRequest.number}
  </a>
  );
  }
 
- return <EnterpriseBadge label={state.label} tone={state.tone} />;
+ return <EnterpriseBadge label={state.label} tone={state.tone} title="PR Status" />;
 }
 
-function ExpandedRelease({ release }: { release: ReleaseConsoleItem }) {
- const promotionHistory = release.history.filter((event) => !event.status.toLowerCase().includes("rollback"));
- const rollbackHistory = release.history.filter((event) => event.status.toLowerCase().includes("rollback") || event.from === event.to);
+function ShaInline({ sha, commitUrl }: { sha: string; commitUrl?: string }) {
+ const [copied, setCopied] = useState(false);
+
+ async function copySha() {
+ if (sha === "unknown") {
+  return;
+ }
+
+ try {
+  await navigator.clipboard.writeText(sha);
+  setCopied(true);
+  window.setTimeout(() => setCopied(false), 1200);
+ } catch {
+  setCopied(false);
+ }
+ }
 
  return (
- <div className="border-t border-slate-200 bg-slate-50 px-4 py-5">
- <div className="grid gap-4 2xl:grid-cols-[1.1fr_1fr_1fr]">
- <DetailPanel title="Overview" icon={<Activity className="h-4 w-4" aria-hidden="true" />}>
- <KeyValue label="Repository" value={`${release.repositoryOwner}/${release.repositoryName}`} href={release.repositoryUrl} />
- <KeyValue label="Default branch" value={release.defaultBranch} />
- <KeyValue label="Source" value={release.source === "catalog" ? "Persisted catalog" : "Demo fallback"} />
- <KeyValue label="Image SHA" value={release.environments.map((environment) => `${environment.environment}: ${environment.sha}`).join("  ")} mono />
- </DetailPanel>
- <DetailPanel title="Release Timeline" icon={<Clock3 className="h-4 w-4" aria-hidden="true" />}>
- <TimelineList items={release.timeline} empty="No deployment events recorded." />
- </DetailPanel>
- <DetailPanel title="Recent Pull Requests" icon={<GitPullRequest className="h-4 w-4" aria-hidden="true" />}>
- {release.openPullRequests.length > 0 ? release.openPullRequests.map((pullRequest) => (
- <a key={pullRequest.number} href={pullRequest.url} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
- <span className="min-w-0 truncate">#{pullRequest.number} {pullRequest.title}</span>
- <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+ <div className="mt-1 flex items-center gap-1" onClick={(event) => event.stopPropagation()}>
+ <code className="truncate font-mono text-[0.7rem] font-medium text-slate-800" title={sha}>{formatSha(sha)}</code>
+ <button
+ type="button"
+ onClick={() => void copySha()}
+ disabled={sha === "unknown"}
+ className="flex h-5 w-5 items-center justify-center rounded text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed group-hover:opacity-100"
+ title="Copy SHA"
+ aria-label="Copy SHA"
+ >
+ {copied ? <Check className="h-3 w-3" aria-hidden="true" /> : <Copy className="h-3 w-3" aria-hidden="true" />}
+ </button>
+ {commitUrl ? (
+ <a
+ href={commitUrl}
+ target="_blank"
+ rel="noreferrer"
+ className="flex h-5 w-5 items-center justify-center rounded text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-900 group-hover:opacity-100"
+ title="View Commit"
+ aria-label="View Commit"
+ >
+ <ExternalLink className="h-3 w-3" aria-hidden="true" />
  </a>
- )) : <EmptyLine text="No PR" />}
- </DetailPanel>
+ ) : null}
  </div>
- <div className="mt-4 grid gap-4 xl:grid-cols-2">
- <DetailPanel title="Promotion History" icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}>
- <HistoryList items={promotionHistory} empty="No promotion history recorded." />
- </DetailPanel>
- <DetailPanel title="Rollback History" icon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}>
- <HistoryList items={rollbackHistory} empty="No rollback history recorded." />
- </DetailPanel>
+ );
+}
+
+function StatusGlyph({ state }: { state: ReturnType<typeof enterpriseState> }) {
+ const glyph = state.tone === "success" ? "✓" : state.tone === "warning" ? "…" : state.tone === "danger" ? "!" : state.tone === "rollback" ? "↺" : "•";
+
+ return (
+ <span className={["inline-flex h-4 w-4 items-center justify-center rounded-full text-[0.62rem] font-bold", glyphClasses[state.tone]].join(" ")} title={state.label}>
+ {glyph}
+ </span>
+ );
+}
+
+function ExpandedRelease({ release, onDetails }: { release: ReleaseConsoleItem; onDetails: (detail: DrawerDetail) => void }) {
+ return (
+ <div className="border-t border-slate-200 bg-slate-50 px-4 py-3">
+ <div className="grid gap-3 xl:grid-cols-[1fr_1fr_1fr_auto] xl:items-start">
+ <div className="grid gap-1 text-xs">
+ <p className="font-semibold text-slate-950">Overview</p>
+ <p className="text-slate-600">{release.repositoryOwner}/{release.repositoryName}</p>
+ <p className="text-slate-500">{release.source === "catalog" ? "Persisted catalog" : "Demo fallback"} · {release.defaultBranch}</p>
  </div>
- <div className="mt-4 grid gap-4 xl:grid-cols-2">
- <DetailPanel title="Audit Events" icon={<GitBranch className="h-4 w-4" aria-hidden="true" />}>
- {release.auditEvents.length > 0 ? release.auditEvents.slice(0, 5).map((event) => (
- <div key={`${event.action}-${event.target}-${event.time}`} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs">
- <div className="flex flex-wrap items-center justify-between gap-2">
- <span className="font-semibold text-slate-900">{event.action}</span>
- <EnterpriseBadge label={event.result} tone={event.result === "failed" || event.result === "blocked" ? "danger" : event.result === "pending" || event.result === "open" ? "warning" : "success"} />
+ <div className="grid gap-1 text-xs">
+ <p className="font-semibold text-slate-950">Latest timeline</p>
+ <p className="truncate text-slate-600">{release.timeline[0]?.event ?? "No deployment events recorded"}</p>
+ <p className="text-slate-500">{release.timeline[0]?.time ?? "No recent event"}</p>
  </div>
- <p className="mt-1 text-slate-500">{event.actor} · {event.time}</p>
- <p className="mt-1 text-slate-700">{event.target}</p>
+ <div className="flex flex-wrap gap-1.5">
+ <SummaryChip label="PRs" value={String(release.openPullRequests.length)} />
+ <SummaryChip label="History" value={String(release.history.length)} />
+ <SummaryChip label="Audit" value={String(release.auditEvents.length)} />
  </div>
- )) : <EmptyLine text="No audit events recorded." />}
- </DetailPanel>
- <DetailPanel title="Deployment Events" icon={<Server className="h-4 w-4" aria-hidden="true" />}>
- <div className="grid gap-2">
- {release.environments.map((environment) => (
- <div key={environment.environment} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs">
- <div className="flex items-center justify-between gap-3">
- <span className="font-semibold text-slate-900">{environmentLabels[environment.environment]}</span>
- <EnterpriseBadge label={enterpriseState(environment.status).label} tone={enterpriseState(environment.status).tone} />
- </div>
- <p className="mt-1 break-all font-mono text-slate-600">{environment.overlayPath}</p>
- </div>
- ))}
- </div>
- </DetailPanel>
+ <button
+ type="button"
+ onClick={() => onDetails({ kind: "release", release })}
+ className="inline-flex h-8 items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-800 hover:bg-slate-100"
+ >
+ Open details
+ </button>
  </div>
  </div>
  );
@@ -412,6 +444,10 @@ function ExpandedRelease({ release }: { release: ReleaseConsoleItem }) {
 function DetailsDrawer({ detail, onClose }: { detail: DrawerDetail | null; onClose: () => void }) {
  if (!detail) {
  return null;
+ }
+
+ if (detail.kind === "release") {
+ return <ReleaseDetailsDrawer release={detail.release} onClose={onClose} />;
  }
 
  return (
@@ -441,6 +477,110 @@ function DetailsDrawer({ detail, onClose }: { detail: DrawerDetail | null; onClo
  <ExternalLink className="h-4 w-4" aria-hidden="true" />
  Audit Logs
  </a>
+ </div>
+ </aside>
+ </div>
+ );
+}
+
+type ReleaseDrawerTab = "overview" | "timeline" | "promotion" | "rollback" | "audit" | "images" | "gitops";
+
+const releaseDrawerTabs: Array<{ id: ReleaseDrawerTab; label: string }> = [
+ { id: "overview", label: "Overview" },
+ { id: "timeline", label: "Timeline" },
+ { id: "promotion", label: "Promotion History" },
+ { id: "rollback", label: "Rollback History" },
+ { id: "audit", label: "Audit" },
+ { id: "images", label: "Images" },
+ { id: "gitops", label: "GitOps" }
+];
+
+function ReleaseDetailsDrawer({ release, onClose }: { release: ReleaseConsoleItem; onClose: () => void }) {
+ const [activeTab, setActiveTab] = useState<ReleaseDrawerTab>("overview");
+ const promotionHistory = release.history.filter((event) => !event.status.toLowerCase().includes("rollback"));
+ const rollbackHistory = release.history.filter((event) => event.status.toLowerCase().includes("rollback") || event.from === event.to);
+
+ return (
+ <div className="fixed inset-0 z-40 flex justify-end overflow-x-auto bg-slate-950/40" role="dialog" aria-modal="true">
+ <button type="button" className="absolute inset-0 cursor-default" aria-label="Close release details drawer" onClick={onClose} />
+ <aside className="relative z-10 flex h-full w-full min-w-[420px] max-w-3xl flex-col border-l border-slate-200 bg-white text-slate-900 shadow-card">
+ <div className="border-b border-slate-200 px-5 py-4">
+ <div className="flex items-start justify-between gap-4">
+ <div className="min-w-0">
+ <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Release details</p>
+ <h2 className="mt-1 truncate font-heading text-xl font-semibold text-slate-950">{release.serviceName}</h2>
+ <p className="mt-1 truncate text-xs text-slate-500">{release.repositoryOwner}/{release.repositoryName}</p>
+ </div>
+ <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100">
+ <X className="h-4 w-4" aria-hidden="true" />
+ </button>
+ </div>
+ <div className="mt-4 flex gap-1 overflow-x-auto">
+ {releaseDrawerTabs.map((tab) => (
+ <button
+ key={tab.id}
+ type="button"
+ onClick={() => setActiveTab(tab.id)}
+ className={activeTab === tab.id
+ ? "h-8 shrink-0 rounded-md bg-slate-950 px-2.5 text-xs font-semibold text-white"
+ : "h-8 shrink-0 rounded-md px-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"}
+ >
+ {tab.label}
+ </button>
+ ))}
+ </div>
+ </div>
+ <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+ {activeTab === "overview" ? (
+ <div className="grid gap-4">
+ <DetailPanel title="Overview" icon={<Activity className="h-4 w-4" aria-hidden="true" />}>
+ <KeyValue label="Service" value={release.serviceName} />
+ <KeyValue label="Team" value={release.teamName} />
+ <KeyValue label="Repository" value={`${release.repositoryOwner}/${release.repositoryName}`} href={release.repositoryUrl} />
+ <KeyValue label="Default branch" value={release.defaultBranch} />
+ <KeyValue label="Source" value={release.source === "catalog" ? "Persisted catalog" : "Demo fallback"} />
+ </DetailPanel>
+ <DetailPanel title="Current environments" icon={<Server className="h-4 w-4" aria-hidden="true" />}>
+ <EnvironmentDetailList release={release} />
+ </DetailPanel>
+ </div>
+ ) : null}
+ {activeTab === "timeline" ? <DetailPanel title="Timeline" icon={<Clock3 className="h-4 w-4" aria-hidden="true" />}><TimelineList items={release.timeline} empty="No deployment events recorded." /></DetailPanel> : null}
+ {activeTab === "promotion" ? <DetailPanel title="Promotion History" icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}><HistoryList items={promotionHistory} empty="No promotion history recorded." /></DetailPanel> : null}
+ {activeTab === "rollback" ? <DetailPanel title="Rollback History" icon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}><HistoryList items={rollbackHistory} empty="No rollback history recorded." /></DetailPanel> : null}
+ {activeTab === "audit" ? (
+ <DetailPanel title="Audit" icon={<GitBranch className="h-4 w-4" aria-hidden="true" />}>
+ {release.auditEvents.length > 0 ? release.auditEvents.map((event) => (
+ <div key={`${event.action}-${event.target}-${event.time}`} className="rounded-md bg-slate-50 px-3 py-2 text-xs">
+ <div className="flex items-center justify-between gap-3">
+ <span className="font-semibold text-slate-900">{event.action}</span>
+ <EnterpriseBadge label={event.result} tone={event.result === "failed" || event.result === "blocked" ? "danger" : event.result === "pending" || event.result === "open" ? "warning" : "success"} />
+ </div>
+ <p className="mt-1 text-slate-500">{event.actor} · {event.time}</p>
+ <p className="mt-1 text-slate-700">{event.target}</p>
+ </div>
+ )) : <EmptyLine text="No audit events recorded." />}
+ </DetailPanel>
+ ) : null}
+ {activeTab === "images" ? (
+ <DetailPanel title="Images" icon={<Copy className="h-4 w-4" aria-hidden="true" />}>
+ {release.environments.map((environment) => (
+ <div key={environment.environment} className="rounded-md bg-slate-50 px-3 py-2 text-xs">
+ <p className="font-semibold uppercase tracking-[0.12em] text-slate-500">{environmentLabels[environment.environment]}</p>
+ <p className="mt-1 break-all font-mono text-slate-900">{environment.sha}</p>
+ </div>
+ ))}
+ </DetailPanel>
+ ) : null}
+ {activeTab === "gitops" ? (
+ <DetailPanel title="GitOps" icon={<GitBranch className="h-4 w-4" aria-hidden="true" />}>
+ <KeyValue label="Repository" value={`${release.repositoryOwner}/${release.repositoryName}`} href={release.repositoryUrl} />
+ <KeyValue label="Default branch" value={release.defaultBranch} />
+ {release.environments.map((environment) => (
+ <KeyValue key={environment.environment} label={`${environment.environment} overlay`} value={`${environment.overlayPath} · ${environment.sha}`} mono />
+ ))}
+ </DetailPanel>
+ ) : null}
  </div>
  </aside>
  </div>
@@ -502,6 +642,44 @@ function KeyValue({ label, value, href, mono }: { label: string; value: string; 
  ) : value}
  </dd>
  </div>
+ );
+}
+
+function EnvironmentDetailList({ release }: { release: ReleaseConsoleItem }) {
+ return (
+ <div className="grid gap-2">
+ {release.environments.map((environment) => {
+ const state = enterpriseState(environment.status);
+ const commitUrl = environment.sha === "unknown" ? undefined : `${release.repositoryUrl.replace(/\/$/, "")}/commit/${environment.sha}`;
+
+ return (
+ <div key={environment.environment} className="rounded-md bg-slate-50 px-3 py-2 text-xs">
+ <div className="flex items-center justify-between gap-3">
+ <span className="font-semibold uppercase tracking-[0.12em] text-slate-500" title="Environment">{environmentLabels[environment.environment]}</span>
+ <EnterpriseBadge label={state.label} tone={state.tone} title={state.label} />
+ </div>
+ <div className="mt-1 flex items-center gap-2">
+ <span className="break-all font-mono text-slate-900">{environment.sha}</span>
+ {commitUrl ? (
+ <a href={commitUrl} target="_blank" rel="noreferrer" className="text-slate-600 underline decoration-slate-300 underline-offset-2 hover:text-slate-950">
+ View Commit
+ </a>
+ ) : null}
+ </div>
+ <p className="mt-1 break-all font-mono text-slate-500">{environment.overlayPath}</p>
+ </div>
+ );
+ })}
+ </div>
+ );
+}
+
+function SummaryChip({ label, value }: { label: string; value: string }) {
+ return (
+ <span className="inline-flex h-6 items-center gap-1 rounded-full bg-slate-100 px-2 text-[0.68rem] font-medium text-slate-700">
+ <span className="text-slate-500">{label}</span>
+ <span className="font-semibold text-slate-900">{value}</span>
+ </span>
  );
 }
 
@@ -571,8 +749,25 @@ const metricText: Record<EnterpriseTone, string> = {
  neutral: "text-slate-950"
 };
 
-function EnterpriseBadge({ label, tone }: { label: string; tone: EnterpriseTone }) {
- return <span className={["inline-flex items-center rounded-md border px-2 py-0.5 text-[0.68rem] font-semibold", badgeClasses[tone]].join(" ")}>{label}</span>;
+const glyphClasses: Record<EnterpriseTone, string> = {
+ success: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+ info: "bg-slate-100 text-slate-700 ring-1 ring-slate-200",
+ warning: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+ danger: "bg-red-50 text-red-700 ring-1 ring-red-200",
+ rollback: "bg-purple-50 text-purple-700 ring-1 ring-purple-200",
+ neutral: "bg-slate-100 text-slate-500 ring-1 ring-slate-200"
+};
+
+function EnterpriseBadge({ label, tone, title }: { label: string; tone: EnterpriseTone; title?: string }) {
+ return <span title={title ?? label} className={["inline-flex items-center rounded-md border px-1.5 py-0.5 text-[0.65rem] font-semibold", badgeClasses[tone]].join(" ")}>{label}</span>;
+}
+
+function formatSha(sha: string) {
+ if (sha === "unknown" || sha.length <= 12) {
+ return sha;
+ }
+
+ return `${sha.slice(0, 7)}…${sha.slice(-4)}`;
 }
 
 function enterpriseState(status: string): { key: EnterpriseStatusKey; label: string; tone: EnterpriseTone } {

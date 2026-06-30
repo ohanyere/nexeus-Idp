@@ -13,16 +13,16 @@ export function AppSidebar() {
 
  return (
  <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-slate-200 bg-white text-slate-800 lg:flex lg:flex-col">
- <div className="flex h-14 items-center gap-2.5 border-b border-slate-200 px-4">
- <div className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-slate-950 text-white">
- <SquareStack className="h-4 w-4" aria-hidden="true" />
+ <div className="flex h-12 items-center gap-2 border-b border-slate-200 px-3">
+ <div className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-slate-950 text-white">
+ <SquareStack className="h-3.5 w-3.5" aria-hidden="true" />
  </div>
  <div className="min-w-0">
- <p className="truncate font-heading text-sm font-semibold text-slate-950">Nexus Platform</p>
- <p className="truncate text-[0.7rem] font-medium text-slate-500">Internal Developer Platform</p>
+ <p className="truncate font-heading text-[0.82rem] font-semibold text-slate-950">Nexus Platform</p>
+ <p className="truncate text-[0.66rem] font-medium text-slate-500">Internal Developer Platform</p>
  </div>
  </div>
- <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-2 py-3">
+ <nav className="flex flex-1 flex-col gap-3 overflow-y-auto px-2 py-2.5">
  {navigationGroups.map((group) => {
  const items = navigation.filter((item) => item.group === group);
 

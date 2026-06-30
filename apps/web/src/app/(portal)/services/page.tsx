@@ -155,7 +155,7 @@ export default function ServicesPage() {
  action={
  <Link
  href="/services/create"
- className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-950 bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800"
+ className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-950 bg-slate-950 px-2.5 text-xs font-semibold text-white hover:bg-slate-800"
  >
  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
  Create Service
@@ -177,10 +177,10 @@ export default function ServicesPage() {
  ) : null}
 
  <section className="console-panel rounded-md p-3">
- <div className="grid gap-3 lg:grid-cols-[minmax(240px,1.3fr)_repeat(4,minmax(130px,1fr))]">
+ <div className="grid gap-2.5 lg:grid-cols-[minmax(240px,1.3fr)_repeat(4,minmax(130px,1fr))]">
  <label className="grid gap-1.5 text-xs font-medium text-slate-800">
  Search catalog
- <div className="flex h-9 items-center rounded-md border border-line bg-white px-2.5 focus-within:border-brand">
+ <div className="flex h-8 items-center rounded-md border border-line bg-white px-2.5 focus-within:border-brand">
  <Search className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden="true" />
  <input
  value={query}
@@ -198,7 +198,7 @@ export default function ServicesPage() {
  </section>
 
  <section className="console-panel overflow-visible rounded-md">
- <div className="border-b border-line px-4 py-3">
+ <div className="border-b border-line px-4 py-2.5">
  <h2 className="font-heading text-base font-semibold text-ink">Service catalog</h2>
  <p className="mt-1 text-xs text-muted">Dense summary records; open a service for topology, deployments, resources, and scorecards.</p>
  </div>
@@ -207,16 +207,16 @@ export default function ServicesPage() {
  const resources = getServiceResources(service.id);
 
  return (
- <article key={service.id} className="grid gap-3 px-4 py-3 hover:bg-canvas xl:grid-cols-[minmax(0,1.5fr)_180px_210px_180px] xl:items-center">
+ <article key={service.id} className="grid gap-2.5 px-4 py-2.5 transition hover:bg-slate-50 xl:grid-cols-[minmax(0,1.5fr)_180px_210px_180px] xl:items-center">
  <div className="min-w-0">
- <Link href={`/services/${service.id}`} className="font-heading text-sm font-semibold text-slate-950 hover:underline">
+ <Link href={`/services/${service.id}`} className="font-heading text-[0.95rem] font-semibold text-slate-950 hover:underline">
  {service.name}
  </Link>
  <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">{service.description}</p>
  </div>
- <div className="flex min-w-0 flex-wrap gap-2 text-xs">
- <span className="rounded-md border border-line bg-white px-2 py-1 font-medium text-slate-700">{service.team}</span>
- <span className="rounded-md border border-line bg-white px-2 py-1 text-slate-600">{service.serviceOwner}</span>
+ <div className="grid min-w-0 gap-1 text-xs">
+ <span className="w-fit rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">{service.team}</span>
+ <span className="truncate text-slate-500">{service.serviceOwner}</span>
  </div>
  <div className="grid gap-2 text-xs">
  <div className="flex flex-wrap gap-2">
@@ -225,7 +225,7 @@ export default function ServicesPage() {
  </div>
  <p className="text-muted">{service.template} · {service.currentVersion}</p>
  </div>
- <div className="grid grid-cols-3 gap-2 text-xs">
+ <div className="flex flex-wrap gap-1.5 text-xs">
  <Meta label="envs" value={service.environments.join("/")} />
  <Meta label="deps" value={String(service.dependencies.length)} />
  <Meta label="resources" value={String(resources.length)} />
@@ -256,7 +256,7 @@ function FilterSelect({
  <select
  value={value}
  onChange={(event) => onChange(event.target.value)}
- className="h-9 rounded-md border border-line bg-white px-2.5 text-xs text-ink outline-none focus:border-brand"
+ className="h-8 rounded-md border border-line bg-white px-2.5 text-xs text-ink outline-none focus:border-brand"
  >
  <option value={allValue}>All</option>
  {values.map((item) => (
@@ -269,9 +269,9 @@ function FilterSelect({
 
 function Meta({ label, value }: { label: string; value: string }) {
  return (
- <div className="rounded-md border border-line bg-white px-2 py-1">
- <p className="text-[0.62rem] uppercase tracking-[0.12em] text-muted">{label}</p>
- <p className="mt-0.5 font-semibold text-slate-800">{value}</p>
- </div>
+ <span className="inline-flex h-6 items-center gap-1 rounded-full bg-slate-100 px-2 text-[0.68rem] font-medium text-slate-700">
+ <span className="uppercase tracking-[0.1em] text-slate-500">{label}</span>
+ <span className="font-semibold text-slate-900">{value}</span>
+ </span>
  );
 }
