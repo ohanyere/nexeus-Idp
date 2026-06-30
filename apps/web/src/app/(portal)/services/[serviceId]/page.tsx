@@ -3,9 +3,11 @@ import { RollbackButton, ViewLogsButton } from "@/components/DeploymentActions";
 import { EnvironmentPromotion } from "@/components/EnvironmentPromotion";
 import { OwnershipGraph } from "@/components/OwnershipGraph";
 import { PageHeader } from "@/components/PageHeader";
+import { ReleaseTimelinePanel } from "@/components/ReleaseTimelinePanel";
 import { ServiceDetailTabs } from "@/components/ServiceDetailTabs";
 import { ServiceTopologyGraph } from "@/components/ServiceTopologyGraph";
 import { StatusBadge } from "@/components/StatusBadge";
+import { getReleaseTimelineForService } from "@/lib/release-timeline";
 import { getPersistedService, toCatalogApiService } from "@/lib/server/catalog";
 import {
  auditLogs,
@@ -52,6 +54,7 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  const promotion = getPromotionByServiceId(service.id);
  const detailedScorecard = getScorecardByServiceId(service.id);
  const teamServices = team ? services.filter((candidate) => candidate.teamId === team.id) : [service];
+ const releaseTimeline = getReleaseTimelineForService(service.id);
 
  const serviceDeployments = deployments
  .filter((deployment) => deployment.serviceId === service.id)
@@ -184,6 +187,15 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
 
  <section id="releases" className="scroll-mt-16">
  {promotion ? <EnvironmentPromotion promotion={promotion} /> : null}
+ </section>
+
+ <section id="release-timeline" className="scroll-mt-16">
+ <ReleaseTimelinePanel
+ title="Release Timeline"
+ description={`Code, CI, GitOps, ArgoCD, rollout, and rollback activity for ${service.name}.`}
+ events={releaseTimeline.events}
+ logs={releaseTimeline.logs}
+ />
  </section>
 
  <section className="grid gap-6">

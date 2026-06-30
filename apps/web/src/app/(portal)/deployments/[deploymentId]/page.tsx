@@ -1,9 +1,10 @@
-import { DataTable } from "@/components/DataTable";
 import { RollbackButton } from "@/components/DeploymentActions";
 import { PageHeader } from "@/components/PageHeader";
+import { ReleaseTimelinePanel } from "@/components/ReleaseTimelinePanel";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { deployments } from "@/lib/mock-data";
+import { getReleaseTimelineForDeployment } from "@/lib/release-timeline";
 import { statusTone } from "@/lib/status";
 import { notFound } from "next/navigation";
 
@@ -25,13 +26,6 @@ export default async function DeploymentDetailPage({ params }: DeploymentDetailP
  notFound();
  }
 
- const timelineRows = deployment.timeline.map((event) => ({
- time: event.time,
- event: event.event,
- detail: event.detail,
- status: <StatusBadge label={event.tone} tone={event.tone} />
- }));
-
  const logGroups = [
  deployment.logs.githubActions,
  deployment.logs.imageScan,
@@ -40,6 +34,7 @@ export default async function DeploymentDetailPage({ params }: DeploymentDetailP
  deployment.logs.kyverno,
  deployment.logs.argoRollouts
  ];
+ const releaseTimeline = getReleaseTimelineForDeployment(deployment.id);
 
  return (
  <>
@@ -97,10 +92,13 @@ export default async function DeploymentDetailPage({ params }: DeploymentDetailP
  </dl>
  </article>
 
- <article>
- <h2 className="mb-3 font-heading text-lg font-semibold text-ink">Timeline of deployment events</h2>
- <DataTable columns={["time", "event", "detail", "status"]} rows={timelineRows} />
- </article>
+ <ReleaseTimelinePanel
+ title="Release Timeline"
+ description={`Code, CI, GitOps, ArgoCD, rollout, and rollback activity for ${deployment.service} ${deployment.version}.`}
+ events={releaseTimeline.events}
+ logs={releaseTimeline.logs}
+ compact
+ />
 
  <section className="grid gap-4 xl:grid-cols-2">
  {logGroups.map((group) => (

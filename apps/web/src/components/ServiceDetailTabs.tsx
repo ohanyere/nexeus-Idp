@@ -7,6 +7,7 @@ type ServiceDetailTabsProps = {
 const tabs = [
  { label: "Overview", hash: "overview" },
  { label: "Topology", hash: "topology" },
+ { label: "Release Timeline", hash: "release-timeline" },
  { label: "Resources", hash: "resources" },
  { label: "Releases", hash: "releases" },
  { label: "Audit", hash: "audit" }
