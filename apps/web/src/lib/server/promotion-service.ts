@@ -7,12 +7,22 @@ import { requireDatabase } from "@/lib/server/prisma";
 export type PromotionTargetEnvironment = "stage" | "prod";
 export type PromotionSourceEnvironment = "dev" | "stage";
 export type PromotionStatus = "pr_created" | "pr_open" | "unchanged" | "warning";
+export type RollbackTargetEnvironment = PromotionTargetEnvironment;
+export type RollbackStatus = PromotionStatus;
 
 export type PromotionRequest = {
  service: string;
  owner: string;
  repo: string;
  targetEnvironment: PromotionTargetEnvironment;
+ actor: string;
+};
+
+export type RollbackRequest = {
+ service: string;
+ owner: string;
+ repo: string;
+ targetEnvironment: RollbackTargetEnvironment;
  actor: string;
 };
 
@@ -27,11 +37,11 @@ export type PromotionAuditEvent = {
  action: string;
  actor: string;
  service: string;
- environment: PromotionTargetEnvironment;
+ environment: PromotionTargetEnvironment | RollbackTargetEnvironment;
  sha: string;
  time: string;
  prUrl?: string;
- status: PromotionStatus | "failed";
+ status: PromotionStatus | RollbackStatus | "failed";
  message: string;
 };
 
@@ -45,6 +55,20 @@ export type PromotionResult = {
  prUrl?: string;
  prNumber?: number;
  status: PromotionStatus;
+ auditEvent: PromotionAuditEvent;
+ warning?: string;
+};
+
+export type RollbackResult = {
+ service: string;
+ targetEnvironment: RollbackTargetEnvironment;
+ currentSha: string;
+ rollbackSha: string;
+ branch: string;
+ commitSha?: string;
+ prUrl?: string;
+ prNumber?: number;
+ status: RollbackStatus;
  auditEvent: PromotionAuditEvent;
  warning?: string;
 };
@@ -172,14 +196,15 @@ function fromBase64(content: string) {
 function buildAuditEvent(input: {
  actor: string;
  service: string;
- environment: PromotionTargetEnvironment;
+ environment: PromotionTargetEnvironment | RollbackTargetEnvironment;
  sha: string;
  status: PromotionAuditEvent["status"];
  prUrl?: string;
  message: string;
+ action?: string;
 }): PromotionAuditEvent {
  return {
-  action: "promotion.requested",
+  action: input.action ?? "promotion.requested",
   actor: input.actor,
   service: input.service,
   environment: input.environment,
@@ -240,7 +265,10 @@ export class PromotionService {
   defaultBranch,
   environments,
   openPullRequests: pullRequests.data
-  .filter((pullRequest) => pullRequest.head.ref.startsWith(`promote/${branchSegment(input.service)}/`))
+  .filter((pullRequest) => {
+   const serviceSegment = branchSegment(input.service);
+   return pullRequest.head.ref.startsWith(`promote/${serviceSegment}/`) || pullRequest.head.ref.startsWith(`rollback/${serviceSegment}/`);
+  })
   .map((pullRequest) => ({
    number: pullRequest.number,
    title: pullRequest.title,
@@ -350,6 +378,133 @@ export class PromotionService {
  }
  }
 
+ async rollback(input: RollbackRequest): Promise<RollbackResult> {
+ const repository = await this.octokit.repos.get({
+  owner: input.owner,
+  repo: input.repo
+ });
+ const defaultBranch = repository.data.default_branch || "main";
+ const baseRef = await this.octokit.git.getRef({
+  owner: input.owner,
+  repo: input.repo,
+  ref: `heads/${defaultBranch}`
+ });
+ const targetPath = overlayPaths[input.targetEnvironment];
+ let currentSha = "unknown";
+ let rollbackSha = "unknown";
+ let branch = `rollback/${branchSegment(input.service)}/${input.targetEnvironment}/unknown`;
+
+ try {
+  const currentOverlay = await this.readOverlay(input.owner, input.repo, targetPath, defaultBranch);
+  currentSha = currentOverlay.imageSha;
+  rollbackSha = await this.findPreviousImageSha({
+   owner: input.owner,
+   repo: input.repo,
+   path: targetPath,
+   ref: defaultBranch,
+   currentSha
+  });
+  branch = `rollback/${branchSegment(input.service)}/${input.targetEnvironment}/${branchSegment(rollbackSha)}`;
+  await this.ensureBranch(input.owner, input.repo, branch, baseRef.data.object.sha);
+
+  const targetOverlay = await this.readOverlay(input.owner, input.repo, targetPath, branch);
+  const nextContent = replaceOnlyKustomizeNewTag(targetOverlay.content, rollbackSha);
+  const auditBase = {
+   actor: input.actor,
+   service: input.service,
+   environment: input.targetEnvironment,
+   sha: rollbackSha
+  };
+
+  if (nextContent === targetOverlay.content) {
+   const pullRequest = await this.createOrGetRollbackPullRequest({
+    owner: input.owner,
+    repo: input.repo,
+    base: defaultBranch,
+    branch,
+    service: input.service,
+    targetEnvironment: input.targetEnvironment,
+    currentSha,
+    rollbackSha
+   });
+   const auditEvent = buildAuditEvent({
+    ...auditBase,
+    action: "rollback.requested",
+    status: pullRequest.existing ? "pr_open" : "pr_created",
+    prUrl: pullRequest.url,
+    message: `${input.service} ${input.targetEnvironment} rollback PR ${pullRequest.existing ? "is open" : "created"} for existing rollback target ${rollbackSha}.`
+   });
+   await this.writeAuditEvent(auditEvent, "rollback");
+
+   return {
+    service: input.service,
+    targetEnvironment: input.targetEnvironment,
+    currentSha,
+    rollbackSha,
+    branch,
+    prUrl: pullRequest.url,
+    prNumber: pullRequest.number,
+    status: pullRequest.existing ? "pr_open" : "pr_created",
+    auditEvent
+   };
+  }
+
+  const update = await this.octokit.repos.createOrUpdateFileContents({
+   owner: input.owner,
+   repo: input.repo,
+   path: targetPath,
+   message: `chore: rollback ${input.service} ${input.targetEnvironment} to ${rollbackSha}`,
+   content: toBase64(nextContent),
+   sha: targetOverlay.sha,
+   branch
+  });
+  const commitSha = update.data.commit.sha;
+  const pullRequest = await this.createOrGetRollbackPullRequest({
+   owner: input.owner,
+   repo: input.repo,
+   base: defaultBranch,
+   branch,
+   service: input.service,
+   targetEnvironment: input.targetEnvironment,
+   currentSha,
+   rollbackSha
+  });
+  const auditEvent = buildAuditEvent({
+   ...auditBase,
+   action: "rollback.requested",
+   status: pullRequest.existing ? "pr_open" : "pr_created",
+   prUrl: pullRequest.url,
+   message: `${input.service} ${input.targetEnvironment} rollback PR ${pullRequest.existing ? "is open" : "created"} from ${currentSha} to ${rollbackSha}.`
+  });
+  await this.writeAuditEvent(auditEvent, "rollback");
+
+  return {
+   service: input.service,
+   targetEnvironment: input.targetEnvironment,
+   currentSha,
+   rollbackSha,
+   branch,
+   commitSha,
+   prUrl: pullRequest.url,
+   prNumber: pullRequest.number,
+   status: pullRequest.existing ? "pr_open" : "pr_created",
+   auditEvent
+  };
+ } catch (error) {
+  const auditEvent = buildAuditEvent({
+   actor: input.actor,
+   service: input.service,
+   environment: input.targetEnvironment,
+   sha: rollbackSha !== "unknown" ? rollbackSha : currentSha,
+   action: "rollback.requested",
+   status: "failed",
+   message: `Rollback PR creation failed: ${getErrorMessage(error)}`
+  });
+  await this.writeAuditEvent(auditEvent, "rollback");
+  throw new PromotionServiceError(auditEvent.message, auditEvent);
+ }
+ }
+
  private async readOverlay(owner: string, repo: string, path: string, ref: string): Promise<OverlayReadResult> {
  const response = await this.octokit.repos.getContent({
   owner,
@@ -376,6 +531,36 @@ export class PromotionService {
   sha: file.sha,
   imageSha: extractKustomizeNewTag(content)
  };
+ }
+
+ private async findPreviousImageSha(input: {
+ owner: string;
+ repo: string;
+ path: string;
+ ref: string;
+ currentSha: string;
+ }) {
+ const commits = await this.octokit.repos.listCommits({
+  owner: input.owner,
+  repo: input.repo,
+  sha: input.ref,
+  path: input.path,
+  per_page: 30
+ });
+
+ for (const commit of commits.data) {
+  try {
+   const overlay = await this.readOverlay(input.owner, input.repo, input.path, commit.sha);
+
+   if (overlay.imageSha !== input.currentSha) {
+    return overlay.imageSha;
+   }
+  } catch {
+   // Keep walking history if a commit cannot be decoded as the current overlay shape.
+  }
+ }
+
+ throw new PromotionServiceError(`Could not find a previous image SHA in ${input.path} deployment history.`);
  }
 
  private async ensureBranch(owner: string, repo: string, branch: string, sha: string) {
@@ -451,7 +636,66 @@ export class PromotionService {
  }
  }
 
- private async writeAuditEvent(event: PromotionAuditEvent) {
+ private async createOrGetRollbackPullRequest(input: {
+ owner: string;
+ repo: string;
+ base: string;
+ branch: string;
+ service: string;
+ targetEnvironment: RollbackTargetEnvironment;
+ currentSha: string;
+ rollbackSha: string;
+ }) {
+ try {
+  const response = await this.octokit.pulls.create({
+   owner: input.owner,
+   repo: input.repo,
+   title: `Rollback ${input.service} ${input.targetEnvironment} to ${input.rollbackSha}`,
+   head: input.branch,
+   base: input.base,
+   body: [
+    `Rolls back ${input.service} in ${input.targetEnvironment}.`,
+    "",
+    `Current image SHA: ${input.currentSha}`,
+    `Rollback image SHA: ${input.rollbackSha}`,
+    `Overlay: ${overlayPaths[input.targetEnvironment]}`,
+    "",
+    "This PR is approval-gated and must be merged manually. ArgoCD will deploy the rollback after merge."
+   ].join("\n")
+  });
+
+  return {
+   number: response.data.number,
+   url: response.data.html_url,
+   existing: false
+  };
+ } catch (error) {
+  if (getGitHubErrorStatus(error) !== 422) {
+   throw error;
+  }
+
+  const openPullRequests = await this.octokit.pulls.list({
+   owner: input.owner,
+   repo: input.repo,
+   state: "open",
+   head: `${input.owner}:${input.branch}`,
+   base: input.base
+  });
+  const existing = openPullRequests.data[0];
+
+  if (!existing) {
+   throw error;
+  }
+
+  return {
+   number: existing.number,
+   url: existing.html_url,
+   existing: true
+  };
+ }
+ }
+
+ private async writeAuditEvent(event: PromotionAuditEvent, targetType = "promotion") {
  try {
   const db = requireDatabase();
   const service = await db.service.findFirst({
@@ -471,7 +715,7 @@ export class PromotionService {
    data: {
     action: event.action,
     actor: event.actor,
-    targetType: "promotion",
+    targetType,
     targetName: `${event.service}:${event.environment}:${event.sha}`,
     message: `${event.message}${event.prUrl ? ` PR: ${event.prUrl}` : ""}`,
     serviceId: service?.id,

@@ -9,7 +9,7 @@ import type {
  PromotionMergeStatus,
  StatusTone
 } from "@/lib/mock-data";
-import { ExternalLink, GitPullRequest, Loader2, ShieldCheck } from "lucide-react";
+import { ExternalLink, GitPullRequest, Loader2, RotateCcw, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 type EnvironmentPromotionProps = {
@@ -42,16 +42,37 @@ type PromotionApiWarning = {
  };
 };
 
+type RollbackApiSuccess = {
+ mode: "github";
+ rollback: {
+  service: string;
+  targetEnvironment: "stage" | "prod";
+  currentSha: string;
+  rollbackSha: string;
+  branch: string;
+  commitSha?: string;
+  prUrl?: string;
+  prNumber?: number;
+  status: "pr_created" | "pr_open" | "unchanged" | "warning";
+ };
+ warning?: string;
+};
+
+type RollbackApiWarning = PromotionApiWarning;
+
 type PromotionHistoryItem = EnvironmentPromotionModel["history"][number];
 type PromotionEnvironmentItem = EnvironmentPromotionModel["environments"][number];
+type PromotionTimelineItem = EnvironmentPromotionModel["timeline"][number];
 type TargetEnvironment = "stage" | "prod";
+type ReleaseAction = "promote" | "rollback";
 
 const statusTones: Record<string, StatusTone> = {
  pr_created: "info",
  pr_open: "warning",
  unchanged: "neutral",
  warning: "warning",
- failed: "danger"
+ failed: "danger",
+ "rollback pr created": "warning"
 };
 
 function isPromotionEnvironmentItem(environment: PromotionEnvironmentItem | undefined): environment is PromotionEnvironmentItem {
@@ -61,7 +82,8 @@ function isPromotionEnvironmentItem(environment: PromotionEnvironmentItem | unde
 export function EnvironmentPromotion({ promotion }: EnvironmentPromotionProps) {
  const { can, selectedRole } = useMockSession();
  const [history, setHistory] = useState(promotion.history);
- const [isPromoting, setIsPromoting] = useState<TargetEnvironment | null>(null);
+ const [timeline, setTimeline] = useState(promotion.timeline);
+ const [busyAction, setBusyAction] = useState<{ action: ReleaseAction; targetEnvironment: TargetEnvironment } | null>(null);
  const [lastWarning, setLastWarning] = useState<string | null>(null);
 
  const currentDev = promotion.environments.find((environment) => environment.environment === "dev");
@@ -82,7 +104,7 @@ export function EnvironmentPromotion({ promotion }: EnvironmentPromotionProps) {
   return;
  }
 
- setIsPromoting(targetEnvironment);
+ setBusyAction({ action: "promote", targetEnvironment });
  setLastWarning(null);
  const toastId = notifyLoading("Creating promotion PR", {
   description: `${promotion.serviceId} to ${targetEnvironment}.`
@@ -134,6 +156,16 @@ export function EnvironmentPromotion({ promotion }: EnvironmentPromotionProps) {
   };
 
   setHistory((current) => [nextHistoryItem, ...current]);
+  setTimeline((current) => [
+   {
+    event: "Promotion PR Created",
+    environment: promotionResult.targetEnvironment,
+    time: new Date().toISOString(),
+    status: promotionResult.status === "unchanged" ? "unchanged" : "open",
+    tone: promotionResult.status === "unchanged" ? "neutral" : "info"
+   },
+   ...current
+  ]);
   notifySuccess("Promotion PR ready", {
    id: toastId,
    description: promotionResult.prUrl ? `Opened ${promotionResult.branch}.` : "Promotion state recorded."
@@ -146,7 +178,90 @@ export function EnvironmentPromotion({ promotion }: EnvironmentPromotionProps) {
    description: message
   });
  } finally {
-  setIsPromoting(null);
+  setBusyAction(null);
+ }
+ }
+
+ async function rollback(targetEnvironment: TargetEnvironment) {
+ if (!can("rollback deployment")) {
+  notifyWarning("Rollback blocked", {
+   description: `${selectedRole} is not permitted to roll back ${targetEnvironment}.`
+  });
+  return;
+ }
+
+ setBusyAction({ action: "rollback", targetEnvironment });
+ setLastWarning(null);
+ const toastId = notifyLoading("Creating rollback PR", {
+  description: `${promotion.serviceId} ${targetEnvironment}.`
+ });
+
+ try {
+  const response = await fetch("/api/rollbacks", {
+   method: "POST",
+   headers: {
+    "Content-Type": "application/json"
+   },
+   body: JSON.stringify({
+    service: promotion.serviceId,
+    owner: promotion.repositoryOwner,
+    repo: promotion.repositoryName,
+    targetEnvironment,
+    actor: selectedRole
+   })
+  });
+  const payload = await response.json() as RollbackApiSuccess | RollbackApiWarning;
+
+  if (payload.mode === "warning") {
+   setLastWarning(payload.warning);
+   notifyWarning("Rollback warning", {
+    id: toastId,
+    description: payload.warning
+   });
+   return;
+  }
+
+  if (payload.warning) {
+   setLastWarning(payload.warning);
+  }
+
+  const rollbackResult = payload.rollback;
+  const nextHistoryItem: PromotionHistoryItem = {
+   from: rollbackResult.targetEnvironment,
+   to: rollbackResult.targetEnvironment,
+   version: rollbackResult.rollbackSha,
+   sha: rollbackResult.rollbackSha,
+   status: rollbackResult.status === "unchanged" ? "unchanged" : "rollback pr created",
+   approvedBy: "Pending",
+   promotedAt: "Pending",
+   prUrl: rollbackResult.prUrl,
+   approvalStatus: "pending",
+   mergeStatus: rollbackResult.status === "unchanged" ? "not opened" : "open",
+   deployed: false
+  };
+  const nextTimelineItem: PromotionTimelineItem = {
+   event: "Rollback PR Created",
+   environment: rollbackResult.targetEnvironment,
+   time: new Date().toISOString(),
+   status: rollbackResult.status === "unchanged" ? "unchanged" : "open",
+   tone: rollbackResult.status === "unchanged" ? "neutral" : "warning"
+  };
+
+  setHistory((current) => [nextHistoryItem, ...current]);
+  setTimeline((current) => [nextTimelineItem, ...current]);
+  notifySuccess("Rollback PR ready", {
+   id: toastId,
+   description: rollbackResult.prUrl ? `Opened ${rollbackResult.branch}.` : `Rollback target ${rollbackResult.rollbackSha} recorded.`
+  });
+ } catch (error) {
+  const message = error instanceof Error ? error.message : "Rollback request failed.";
+  setLastWarning(message);
+  notifyError("Rollback request failed", {
+   id: toastId,
+   description: message
+  });
+ } finally {
+  setBusyAction(null);
  }
  }
 
@@ -162,15 +277,29 @@ export function EnvironmentPromotion({ promotion }: EnvironmentPromotionProps) {
  label="Promote to Stage"
  targetEnvironment="stage"
  allowed={can("deploy to stage")}
- busy={isPromoting === "stage"}
+ busy={busyAction?.action === "promote" && busyAction.targetEnvironment === "stage"}
  onClick={() => void promote("stage")}
  />
  <PromotionButton
  label="Promote to Production"
  targetEnvironment="prod"
  allowed={can("deploy to prod")}
- busy={isPromoting === "prod"}
+ busy={busyAction?.action === "promote" && busyAction.targetEnvironment === "prod"}
  onClick={() => void promote("prod")}
+ />
+ <RollbackButton
+ label="Rollback Stage"
+ targetEnvironment="stage"
+ allowed={can("rollback deployment")}
+ busy={busyAction?.action === "rollback" && busyAction.targetEnvironment === "stage"}
+ onClick={() => void rollback("stage")}
+ />
+ <RollbackButton
+ label="Rollback Production"
+ targetEnvironment="prod"
+ allowed={can("rollback deployment")}
+ busy={busyAction?.action === "rollback" && busyAction.targetEnvironment === "prod"}
+ onClick={() => void rollback("prod")}
  />
  {openPullRequests[0]?.prUrl ? (
  <a
@@ -252,7 +381,7 @@ export function EnvironmentPromotion({ promotion }: EnvironmentPromotionProps) {
  <aside>
  <h3 className="font-heading text-lg font-semibold text-ink">Release timeline</h3>
  <div className="mt-3 grid gap-2">
- {promotion.timeline.map((event) => (
+ {timeline.map((event) => (
  <div key={`${event.event}-${event.environment}-${event.time}`} className="rounded-md border border-line bg-white px-3 py-2">
  <div className="flex items-center justify-between gap-3">
  <span className="text-sm font-semibold text-slate-800">{event.event}</span>
@@ -291,6 +420,34 @@ function PromotionButton({
  data-target-environment={targetEnvironment}
  >
  {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />}
+ {label}
+ </button>
+ );
+}
+
+function RollbackButton({
+ label,
+ targetEnvironment,
+ allowed,
+ busy,
+ onClick
+}: {
+ label: string;
+ targetEnvironment: TargetEnvironment;
+ allowed: boolean;
+ busy: boolean;
+ onClick: () => void;
+}) {
+ return (
+ <button
+ type="button"
+ onClick={onClick}
+ disabled={busy}
+ className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 hover:bg-canvas disabled:cursor-wait disabled:opacity-70"
+ aria-disabled={!allowed || busy}
+ data-target-environment={targetEnvironment}
+ >
+ {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />}
  {label}
  </button>
  );
