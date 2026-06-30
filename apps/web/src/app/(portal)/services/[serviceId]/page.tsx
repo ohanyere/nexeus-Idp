@@ -5,9 +5,11 @@ import { OwnershipGraph } from "@/components/OwnershipGraph";
 import { PageHeader } from "@/components/PageHeader";
 import { ReleaseTimelinePanel } from "@/components/ReleaseTimelinePanel";
 import { ServiceDetailTabs } from "@/components/ServiceDetailTabs";
+import { ServiceResourceExplorer } from "@/components/ServiceResourceExplorer";
 import { ServiceTopologyGraph } from "@/components/ServiceTopologyGraph";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getReleaseTimelineForService } from "@/lib/release-timeline";
+import { getServiceResourceInventory } from "@/lib/service-resources";
 import { getPersistedService, toCatalogApiService } from "@/lib/server/catalog";
 import {
  auditLogs,
@@ -55,6 +57,7 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  const detailedScorecard = getScorecardByServiceId(service.id);
  const teamServices = team ? services.filter((candidate) => candidate.teamId === team.id) : [service];
  const releaseTimeline = getReleaseTimelineForService(service.id);
+ const resourceInventory = getServiceResourceInventory(service.id);
 
  const serviceDeployments = deployments
  .filter((deployment) => deployment.serviceId === service.id)
@@ -72,13 +75,6 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  strategy: deployment.rolloutStrategy,
  rollback: <RollbackButton deployment={deployment} compact />,
  logs: <ViewLogsButton deploymentId={deployment.id} />
- }));
-
- const resourceRows = serviceResources.map((resource) => ({
- name: resource.name,
- type: resource.type,
- environment: resource.environment,
- status: <StatusBadge label={resource.status} tone={statusTone(resource.status)} />
  }));
 
  const dependencyRows = service.dependencies.map((dependency) => ({
@@ -204,10 +200,9 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  <DataTable columns={["version", "environment", "status", "commit SHA", "image tag", "deployed at", "strategy", "rollback", "logs"]} rows={serviceDeployments} />
  </article>
 
- <article id="resources" className="scroll-mt-16">
- <h2 className="mb-3 font-heading text-lg font-semibold text-ink">Resources</h2>
- <DataTable columns={["name", "type", "environment", "status"]} rows={resourceRows} />
- </article>
+ <section id="resources" className="scroll-mt-16">
+ <ServiceResourceExplorer inventory={resourceInventory} />
+ </section>
 
  <article>
  <h2 className="mb-3 font-heading text-lg font-semibold text-ink">Dependencies</h2>
