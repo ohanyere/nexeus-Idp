@@ -100,3 +100,52 @@ model AuditLog {
   teamId     String?
   team       Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
 }
+
+model InfrastructureProvisionRequest {
+  id                 String                         @id @default(cuid())
+  resourceType       String
+  resourceName       String
+  claimName          String
+  claimKind          String
+  apiVersion         String
+  compositionRef     String
+  teamName           String
+  teamSlug           String
+  environment        String
+  namespace          String
+  serviceId          String?
+  serviceName        String?
+  requester          String
+  requesterEmail     String
+  status             String
+  gitOpsStatus       String
+  provisioningStatus String
+  clusterStatus      String
+  repositoryOwner    String
+  repositoryName     String
+  repositoryUrl      String
+  defaultBranch      String
+  branch             String?
+  commitSha          String?
+  prUrl              String?
+  prNumber           Int?
+  prStatus           String?
+  mergeStatus        String?
+  claimPath          String
+  claimManifest      String
+  errorMessage       String?
+  createdAt          DateTime                       @default(now())
+  updatedAt          DateTime                       @updatedAt
+  events             InfrastructureProvisionEvent[]
+}
+
+model InfrastructureProvisionEvent {
+  id        String                         @id @default(cuid())
+  requestId String
+  event     String
+  actor     String
+  status    String
+  message   String
+  createdAt DateTime                       @default(now())
+  request   InfrastructureProvisionRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}

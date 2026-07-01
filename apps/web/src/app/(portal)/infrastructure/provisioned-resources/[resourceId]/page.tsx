@@ -25,7 +25,7 @@ export default async function ProvisionedResourceDetailPage({ params }: Provisio
 
   return (
     <>
-      <PageHeader title={resource.name} description={`${resource.type} owned by ${resource.team} in ${resource.environment}.`} eyebrow="Provisioned resource" />
+      <PageHeader title={resource.name} description={`${resource.type} owned by ${resource.team} in ${resource.environment}. Legacy sample detail; GitOps-backed requests are tracked in the Provisioned Resources list.`} eyebrow="Provisioned resource" />
       <section className="grid gap-5 xl:grid-cols-2">
         <Panel title="Overview">
           <dl className="grid gap-3 text-sm md:grid-cols-2">

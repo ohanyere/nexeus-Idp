@@ -21,7 +21,7 @@ export default async function ResourceCatalogDetailPage({ params }: ResourceCata
 
   return (
     <>
-      <PageHeader title={resource.name} description={resource.description} eyebrow="Resource details" action={<ProvisionResourceButton resourceId={resource.id} />} />
+      <PageHeader title={resource.name} description={resource.description} eyebrow="Resource details" action={resource.gitOpsResourceId ? <ProvisionResourceButton resourceId={resource.id} label="Provision through GitOps" /> : null} />
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid gap-5">
           <Panel title="Overview">
@@ -45,9 +45,9 @@ export default async function ResourceCatalogDetailPage({ params }: ResourceCata
             <div className="grid gap-2 text-center text-xs font-semibold text-slate-700">
               <div className="rounded-md border border-line bg-canvas px-3 py-3">Developer request</div>
               <div>↓</div>
-              <div className="rounded-md border border-line bg-canvas px-3 py-3">Platform approval</div>
+              <div className="rounded-md border border-line bg-canvas px-3 py-3">GitHub pull request approval</div>
               <div>↓</div>
-              <div className="rounded-md border border-line bg-canvas px-3 py-3">{resource.provider}</div>
+              <div className="rounded-md border border-line bg-canvas px-3 py-3">ArgoCD syncs Crossplane claim</div>
               <div>↓</div>
               <div className="rounded-md border border-line bg-canvas px-3 py-3">{resource.name}</div>
             </div>

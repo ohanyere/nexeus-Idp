@@ -13,17 +13,34 @@ export type InfrastructureResourceType =
   | "Object Storage"
   | "SQS Queue"
   | "SNS Topic"
+  | "DynamoDB Table"
   | "RDS Instance"
   | "Namespace"
   | "Secret"
   | "ConfigMap"
   | "Persistent Volume"
   | "DNS Record";
-export type ProvisionRequestStatus = "Pending" | "Waiting Approval" | "Approved" | "Provisioning" | "Ready" | "Failed" | "Rejected" | "Cancelled";
+export type ProvisionRequestStatus =
+  | "Requested"
+  | "PR Created"
+  | "Awaiting Approval"
+  | "Merged"
+  | "ArgoCD Syncing"
+  | "Claim Accepted"
+  | "Provisioning"
+  | "Ready"
+  | "Failed"
+  | "Pending"
+  | "Waiting Approval"
+  | "Approved"
+  | "Rejected"
+  | "Cancelled";
 export type ProvisionedResourceStatus = "Ready" | "Provisioning" | "Failed" | "Pending" | "Drift";
+export type GitOpsResourceId = "postgresql" | "redis" | "s3-bucket" | "sqs-queue" | "dynamodb-table";
 
 export type ResourceCatalogItem = {
   id: string;
+  gitOpsResourceId?: GitOpsResourceId;
   type: InfrastructureResourceType;
   name: string;
   description: string;
@@ -36,6 +53,8 @@ export type ResourceCatalogItem = {
   useCases: string[];
   dependencies: string[];
 };
+
+export const gitOpsSupportedResourceIds: GitOpsResourceId[] = ["postgresql", "redis", "s3-bucket", "sqs-queue", "dynamodb-table"];
 
 export type ProvisionRequest = {
   id: string;
@@ -86,16 +105,17 @@ export type ResourceTemplate = {
 const envs: EnvironmentName[] = ["dev", "stage", "prod"];
 
 export const resourceCatalog: ResourceCatalogItem[] = [
-  item("postgresql", "PostgreSQL", "Managed PostgreSQL", "Relational database claim with backups, monitoring, and network policy.", "Data Platform", true, "$180", ["dev", "stage", "prod"], "Crossplane", ["version", "storage", "backup", "region", "labels"], ["transactional API state", "ledger storage"], ["namespace", "secret"]),
-  item("redis", "Redis", "Managed Redis", "Low-latency cache with optional persistence and HA.", "Runtime Platform", false, "$95", envs, "Crossplane", ["version", "memory", "persistence", "high availability", "backup", "region", "tags"], ["session cache", "idempotency keys"], ["namespace", "secret"]),
+  item("postgresql", "PostgreSQL", "Managed PostgreSQL", "Relational database claim with backups, monitoring, and network policy.", "Data Platform", true, "$180", ["dev", "stage", "prod"], "Crossplane", ["region", "storageGB", "instanceClass", "deletionPolicy"], ["transactional API state", "ledger storage"], ["namespace", "secret"], "postgresql"),
+  item("redis", "Redis", "Managed Redis", "Low-latency cache with optional persistence and HA.", "Runtime Platform", false, "$95", envs, "Crossplane", ["region", "nodeType", "numCacheNodes", "deletionPolicy"], ["session cache", "idempotency keys"], ["namespace", "secret"], "redis"),
   item("mysql", "MySQL", "Managed MySQL", "Relational database for services that need MySQL compatibility.", "Data Platform", true, "$165", envs, "Crossplane", ["version", "storage", "backup", "region"], ["legacy service storage"], ["namespace"]),
   item("mongodb", "MongoDB", "Managed MongoDB", "Document database with team-scoped credentials.", "Data Platform", true, "$210", ["stage", "prod"], "Terraform Cloud", ["version", "storage", "replicas", "region"], ["catalog documents"], ["secret"]),
   item("kafka", "Kafka", "Kafka Topic", "Event streaming topic with retention and schema ownership.", "Streaming Platform", true, "$140", ["stage", "prod"], "Crossplane", ["partitions", "retention", "schema policy"], ["domain events", "async workflows"], ["namespace"]),
   item("rabbitmq", "RabbitMQ", "RabbitMQ Queue", "AMQP queue with dead-letter and retry settings.", "Streaming Platform", false, "$80", envs, "Crossplane", ["queue name", "dlq", "retention"], ["worker queue"], ["secret"]),
-  item("s3-bucket", "S3 Bucket", "S3 Bucket", "Object bucket with encryption, lifecycle, and cost tags.", "Cloud Platform", false, "$45", envs, "AWS Service Catalog", ["name", "region", "lifecycle", "encryption"], ["assets", "exports", "reports"], ["iam role"]),
+  item("s3-bucket", "S3 Bucket", "S3 Bucket", "Object bucket with encryption, lifecycle, and cost tags.", "Cloud Platform", false, "$45", envs, "Crossplane", ["region", "versioning", "deletionPolicy"], ["assets", "exports", "reports"], ["namespace", "secret"], "s3-bucket"),
   item("object-storage", "Object Storage", "Object Storage", "Provider-neutral object storage claim.", "Cloud Platform", false, "$40", envs, "Crossplane", ["bucket", "retention", "region"], ["portable storage"], ["secret"]),
-  item("sqs-queue", "SQS Queue", "SQS Queue", "AWS queue with retry, visibility timeout, and DLQ.", "Cloud Platform", false, "$30", envs, "AWS Service Catalog", ["visibility timeout", "dlq", "retention"], ["worker queue"], ["iam role"]),
+  item("sqs-queue", "SQS Queue", "SQS Queue", "AWS queue with retry, visibility timeout, and DLQ.", "Cloud Platform", false, "$30", envs, "Crossplane", ["region", "fifo", "visibilityTimeoutSeconds", "deletionPolicy"], ["worker queue"], ["namespace", "secret"], "sqs-queue"),
   item("sns-topic", "SNS Topic", "SNS Topic", "Pub/sub topic with team-owned subscriptions.", "Cloud Platform", false, "$25", envs, "AWS Service Catalog", ["topic", "subscriptions", "filters"], ["notifications"], ["iam role"]),
+  item("dynamodb-table", "DynamoDB Table", "DynamoDB Table", "Key-value table claim with on-demand billing for service state.", "Data Platform", false, "$60", envs, "Crossplane", ["region", "hashKey", "billingMode", "deletionPolicy"], ["service state", "idempotency store"], ["namespace", "secret"], "dynamodb-table"),
   item("rds-instance", "RDS Instance", "RDS Instance", "Dedicated RDS instance for regulated workloads.", "Data Platform", true, "$420", ["prod"], "Terraform Cloud", ["engine", "size", "multi-az", "backup"], ["tier 0 database"], ["vpc", "secret"]),
   item("namespace", "Namespace", "Kubernetes Namespace", "Isolated Kubernetes namespace with quotas and baseline policy.", "Platform Engineering", false, "$0", envs, "Kubernetes", ["name", "labels", "quota"], ["service boundary"], ["rbac"]),
   item("secret", "Secret", "Secret", "Kubernetes secret placeholder for future external secret integration.", "Security Platform", true, "$0", envs, "Kubernetes", ["keys", "rotation", "owner"], ["application credentials"], ["namespace"]),
@@ -143,8 +163,8 @@ export function getProvisionedResourcesForService(serviceId: string) {
   return provisionedInfrastructureResources.filter((resource) => resource.linkedServiceIds.includes(serviceId));
 }
 
-function item(id: string, type: InfrastructureResourceType, name: string, description: string, owner: string, approvalRequired: boolean, estimatedMonthlyCost: string, supportedEnvironments: EnvironmentName[], provider: InfrastructureProvider, parameters: string[], useCases: string[], dependencies: string[]): ResourceCatalogItem {
-  return { id, type, name, description, owner, approvalRequired, estimatedMonthlyCost, supportedEnvironments, provider, parameters, useCases, dependencies };
+function item(id: string, type: InfrastructureResourceType, name: string, description: string, owner: string, approvalRequired: boolean, estimatedMonthlyCost: string, supportedEnvironments: EnvironmentName[], provider: InfrastructureProvider, parameters: string[], useCases: string[], dependencies: string[], gitOpsResourceId?: GitOpsResourceId): ResourceCatalogItem {
+  return { id, gitOpsResourceId, type, name, description, owner, approvalRequired, estimatedMonthlyCost, supportedEnvironments, provider, parameters, useCases, dependencies };
 }
 
 function request(id: string, requester: string, approver: string, teamId: string, environment: EnvironmentName, resourceType: InfrastructureResourceType, resourceName: string, status: ProvisionRequestStatus, submittedAt: string): ProvisionRequest {
@@ -204,13 +224,13 @@ function template(id: string, name: string, description: string, resourceType: I
 }
 
 function statusTone(status: ProvisionRequestStatus | ProvisionedResourceStatus): StatusTone {
-  if (["Ready", "Approved"].includes(status)) {
+  if (["Ready", "Approved", "Merged", "Claim Accepted"].includes(status)) {
     return "success";
   }
   if (["Failed", "Rejected"].includes(status)) {
     return "danger";
   }
-  if (["Waiting Approval", "Pending", "Provisioning", "Cancelled"].includes(status)) {
+  if (["Waiting Approval", "Pending", "Provisioning", "Cancelled", "Requested", "PR Created", "Awaiting Approval", "ArgoCD Syncing"].includes(status)) {
     return "warning";
   }
   if (status === "Drift") {

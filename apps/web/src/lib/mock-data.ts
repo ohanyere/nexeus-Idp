@@ -248,7 +248,7 @@ export const rolePermissions: Record<MockRole, Permission[]> = {
     "view costs",
     "view audit logs"
   ],
-  Developer: ["create service", "deploy to dev", "deploy to stage"],
+  Developer: ["create service", "create resource", "deploy to dev", "deploy to stage"],
   Viewer: ["view costs"]
 };
 

@@ -317,6 +317,18 @@ function PersistedServiceDetail({ service }: PersistedServiceDetailProps) {
  eyebrow="Persisted service"
  title={service.name}
  description={service.description}
+ action={
+ <ProvisionResourceButton
+ serviceId={service.name}
+ serviceName={service.name}
+ teamName={service.team.name}
+ teamSlug={service.team.slug}
+ repositoryOwner={service.repositoryOwner}
+ repositoryName={service.repositoryName}
+ repositoryUrl={service.repositoryUrl}
+ label="Provision Resource"
+ />
+ }
  />
 
  <section className="console-panel rounded-md p-4">

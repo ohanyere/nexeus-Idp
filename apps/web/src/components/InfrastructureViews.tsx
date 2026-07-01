@@ -2,14 +2,47 @@
 
 import { ProvisionResourceButton } from "@/components/ProvisionResourceButton";
 import { StatusBadge } from "@/components/StatusBadge";
-import { provisionRequests, provisionedInfrastructureResources, resourceCatalog, resourceTemplates } from "@/lib/infrastructure";
-import type { InfrastructureResourceType, InfrastructureProvider, ProvisionRequestStatus, ProvisionedResourceStatus } from "@/lib/infrastructure";
+import { resourceCatalog, resourceTemplates } from "@/lib/infrastructure";
+import type { InfrastructureResourceType } from "@/lib/infrastructure";
 import type { EnvironmentName } from "@/lib/mock-data";
+import { statusTone } from "@/lib/status";
 import { Database, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
 const all = "all";
+
+export type GitOpsProvisionRequestView = {
+  id: string;
+  requester: string;
+  resourceType: string;
+  resourceName: string;
+  teamName: string;
+  environment: string;
+  status: string;
+  gitOpsStatus: string;
+  provisioningStatus: string;
+  clusterStatus: string;
+  branch?: string | null;
+  commitSha?: string | null;
+  prUrl?: string | null;
+  prNumber?: number | null;
+  prStatus?: string | null;
+  mergeStatus?: string | null;
+  claimPath: string;
+  repositoryOwner: string;
+  repositoryName: string;
+  serviceName?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+  events: Array<{
+    event: string;
+    actor: string;
+    status: string;
+    message: string;
+    createdAt: string;
+  }>;
+};
 
 export function ResourceCatalogView() {
   const [query, setQuery] = useState("");
@@ -38,7 +71,7 @@ export function ResourceCatalogView() {
           <article key={resource.id} className="console-panel rounded-md p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-md bg-canvas text-slate-700"><Database className="h-4 w-4" /></div>
-              <StatusBadge label={resource.approvalRequired ? "Approval" : "Self-service"} tone={resource.approvalRequired ? "warning" : "success"} />
+              <StatusBadge label={resource.gitOpsResourceId ? "GitOps claim" : "Unavailable"} tone={resource.gitOpsResourceId ? "success" : "neutral"} />
             </div>
             <h2 className="mt-3 font-heading text-base font-semibold text-ink">{resource.name}</h2>
             <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">{resource.description}</p>
@@ -49,7 +82,7 @@ export function ResourceCatalogView() {
             </dl>
             <div className="mt-4 flex items-center justify-between gap-2">
               <Link href={`/infrastructure/resource-catalog/${resource.id}`} className="text-xs font-semibold text-slate-800 underline decoration-slate-300 underline-offset-2">Details</Link>
-              <ProvisionResourceButton resourceId={resource.id} />
+              {resource.gitOpsResourceId ? <ProvisionResourceButton resourceId={resource.id} label="Provision through GitOps" /> : <span className="text-xs font-medium text-muted">No GitOps claim</span>}
             </div>
           </article>
         ))}
@@ -58,23 +91,24 @@ export function ResourceCatalogView() {
   );
 }
 
-export function ProvisionRequestsView() {
+export function ProvisionRequestsView({ requests, warning }: { requests: GitOpsProvisionRequestView[]; warning?: string }) {
   const [environment, setEnvironment] = useState(all);
   const [status, setStatus] = useState(all);
   const [team, setTeam] = useState(all);
   const [type, setType] = useState(all);
-  const teams = unique(provisionRequests.map((request) => request.team));
-  const statuses = unique(provisionRequests.map((request) => request.status));
-  const types = unique(provisionRequests.map((request) => request.resourceType));
-  const filtered = provisionRequests.filter((request) =>
+  const teams = unique(requests.map((request) => request.teamName));
+  const statuses = unique(requests.map((request) => request.status));
+  const types = unique(requests.map((request) => request.resourceType));
+  const filtered = requests.filter((request) =>
     (environment === all || request.environment === environment) &&
     (status === all || request.status === status) &&
-    (team === all || request.team === team) &&
+    (team === all || request.teamName === team) &&
     (type === all || request.resourceType === type)
   );
 
   return (
     <div className="grid gap-4">
+      {warning ? <StatusMessage tone="warning" message={warning} /> : null}
       <FilterRow>
         <Select label="Environment" value={environment} values={["dev", "stage", "prod"]} onChange={setEnvironment} />
         <Select label="Status" value={status} values={statuses} onChange={setStatus} />
@@ -84,22 +118,38 @@ export function ProvisionRequestsView() {
       <div className="console-panel overflow-hidden rounded-md">
         <div className="overflow-x-auto">
           <table className="min-w-[980px] divide-y divide-line">
-            <thead className="bg-canvas"><tr>{["request", "requester", "approver", "environment", "resource", "submitted", "status"].map((column) => <Th key={column}>{column}</Th>)}</tr></thead>
+            <thead className="bg-canvas"><tr>{["request", "requester", "repository", "environment", "resource", "gitops", "provisioning", "cluster", "pr"].map((column) => <Th key={column}>{column}</Th>)}</tr></thead>
             <tbody className="divide-y divide-line bg-white">{filtered.map((request) => (
               <tr key={request.id} className="hover:bg-canvas">
-                <Td>{request.id}</Td><Td>{request.requester}</Td><Td>{request.approver}</Td><Td>{request.environment}</Td><Td>{request.resourceType} · {request.resourceName}</Td><Td>{request.submittedAt}</Td><Td><StatusBadge label={request.status} tone={request.tone} /></Td>
+                <Td>{request.id}</Td>
+                <Td>{request.requester}</Td>
+                <Td>{request.repositoryOwner}/{request.repositoryName}</Td>
+                <Td>{request.environment}</Td>
+                <Td>{request.resourceType} · {request.resourceName}</Td>
+                <Td><StatusBadge label={request.gitOpsStatus} tone={statusTone(request.gitOpsStatus)} /></Td>
+                <Td><StatusBadge label={request.provisioningStatus} tone={statusTone(request.provisioningStatus)} /></Td>
+                <Td><StatusBadge label={request.clusterStatus} tone={request.clusterStatus === "Not observed" ? "neutral" : statusTone(request.clusterStatus)} /></Td>
+                <Td>{request.prUrl ? <a href={request.prUrl} target="_blank" rel="noreferrer" className="font-semibold text-brand hover:underline">PR #{request.prNumber}</a> : "Pending"}</Td>
               </tr>
             ))}</tbody>
           </table>
         </div>
       </div>
+      {filtered.length === 0 ? <StatusMessage tone="neutral" message="No GitOps provision requests have been recorded yet." /> : null}
       <section className="grid gap-3 md:grid-cols-2">
         {filtered.map((request) => (
           <article key={`${request.id}-timeline`} className="console-panel rounded-md p-4">
-            <h2 className="text-sm font-semibold text-ink">{request.resourceName} timeline</h2>
-            <div className="mt-3 grid gap-2">
-              {request.timeline.map((event) => <div key={`${request.id}-${event.event}`} className="flex items-center justify-between gap-3 rounded-md bg-canvas px-3 py-2 text-xs"><span>{event.event} · {event.actor}</span><StatusBadge label={event.status} tone={event.tone} /></div>)}
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-ink">{request.resourceName} GitOps timeline</h2>
+                <p className="mt-1 text-xs text-muted">{request.claimPath}</p>
+              </div>
+              <StatusBadge label={request.status} tone={statusTone(request.status)} />
             </div>
+            <div className="mt-3 grid gap-2">
+              {request.events.map((event) => <div key={`${request.id}-${event.event}-${event.createdAt}`} className="grid gap-1 rounded-md bg-canvas px-3 py-2 text-xs"><div className="flex items-center justify-between gap-3"><span>{event.event} · {event.actor}</span><StatusBadge label={event.status} tone={statusTone(event.status)} /></div><p className="text-muted">{event.message}</p></div>)}
+            </div>
+            {request.errorMessage ? <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900">{request.errorMessage}</p> : null}
           </article>
         ))}
       </section>
@@ -107,45 +157,43 @@ export function ProvisionRequestsView() {
   );
 }
 
-export function ProvisionedResourcesView() {
+export function ProvisionedResourcesView({ requests, warning }: { requests: GitOpsProvisionRequestView[]; warning?: string }) {
   const [environment, setEnvironment] = useState(all);
-  const [status, setStatus] = useState(all);
+  const [gitOpsStatus, setGitOpsStatus] = useState(all);
   const [team, setTeam] = useState(all);
-  const [provider, setProvider] = useState(all);
   const [type, setType] = useState(all);
-  const teams = unique(provisionedInfrastructureResources.map((resource) => resource.team));
-  const statuses = unique(provisionedInfrastructureResources.map((resource) => resource.status));
-  const providers = unique(provisionedInfrastructureResources.map((resource) => resource.provider));
-  const types = unique(provisionedInfrastructureResources.map((resource) => resource.type));
-  const filtered = provisionedInfrastructureResources.filter((resource) =>
+  const teams = unique(requests.map((request) => request.teamName));
+  const gitOpsStatuses = unique(requests.map((request) => request.gitOpsStatus));
+  const types = unique(requests.map((request) => request.resourceType));
+  const filtered = requests.filter((resource) =>
     (environment === all || resource.environment === environment) &&
-    (status === all || resource.status === status) &&
-    (team === all || resource.team === team) &&
-    (provider === all || resource.provider === provider) &&
-    (type === all || resource.type === type)
+    (gitOpsStatus === all || resource.gitOpsStatus === gitOpsStatus) &&
+    (team === all || resource.teamName === team) &&
+    (type === all || resource.resourceType === type)
   );
 
   return (
     <div className="grid gap-4">
+      {warning ? <StatusMessage tone="warning" message={warning} /> : null}
       <FilterRow>
         <Select label="Environment" value={environment} values={["dev", "stage", "prod"]} onChange={setEnvironment} />
-        <Select label="Status" value={status} values={statuses} onChange={setStatus} />
+        <Select label="GitOps Status" value={gitOpsStatus} values={gitOpsStatuses} onChange={setGitOpsStatus} />
         <Select label="Team" value={team} values={teams} onChange={setTeam} />
-        <Select label="Provider" value={provider} values={providers} onChange={setProvider} />
         <Select label="Resource Type" value={type} values={types} onChange={setType} />
       </FilterRow>
       <div className="console-panel overflow-hidden rounded-md">
         <div className="overflow-x-auto">
           <table className="min-w-[1100px] divide-y divide-line">
-            <thead className="bg-canvas"><tr>{["name", "type", "team", "owner", "environment", "region", "provider", "status", "age", "estimated cost"].map((column) => <Th key={column}>{column}</Th>)}</tr></thead>
+            <thead className="bg-canvas"><tr>{["name", "type", "team", "service", "environment", "gitops status", "provisioning status", "cluster status", "claim path"].map((column) => <Th key={column}>{column}</Th>)}</tr></thead>
             <tbody className="divide-y divide-line bg-white">{filtered.map((resource) => (
               <tr key={resource.id} className="hover:bg-canvas">
-                <Td><Link href={`/infrastructure/provisioned-resources/${resource.id}`} className="font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2">{resource.name}</Link></Td><Td>{resource.type}</Td><Td>{resource.team}</Td><Td>{resource.owner}</Td><Td>{resource.environment}</Td><Td>{resource.region}</Td><Td>{resource.provider}</Td><Td><StatusBadge label={resource.status} tone={resource.tone} /></Td><Td>{resource.age}</Td><Td>{resource.estimatedCost}</Td>
+                <Td>{resource.resourceName}</Td><Td>{resource.resourceType}</Td><Td>{resource.teamName}</Td><Td>{resource.serviceName ?? "Team-level claim"}</Td><Td>{resource.environment}</Td><Td><StatusBadge label={resource.gitOpsStatus} tone={statusTone(resource.gitOpsStatus)} /></Td><Td><StatusBadge label={resource.provisioningStatus} tone={statusTone(resource.provisioningStatus)} /></Td><Td><StatusBadge label={resource.clusterStatus} tone={resource.clusterStatus === "Not observed" ? "neutral" : statusTone(resource.clusterStatus)} /></Td><Td>{resource.claimPath}</Td>
               </tr>
             ))}</tbody>
           </table>
         </div>
       </div>
+      {filtered.length === 0 ? <StatusMessage tone="neutral" message="No GitOps-backed infrastructure resources have been requested yet." /> : null}
     </div>
   );
 }
@@ -192,6 +240,14 @@ function Th({ children }: { children: React.ReactNode }) {
 
 function Td({ children }: { children: React.ReactNode }) {
   return <td className="px-3 py-2 align-top text-xs text-slate-700">{children}</td>;
+}
+
+function StatusMessage({ message, tone }: { message: string; tone: "warning" | "neutral" }) {
+  const className = tone === "warning"
+    ? "rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+    : "rounded-md border border-line bg-canvas px-4 py-3 text-sm text-muted";
+
+  return <section className={className}>{message}</section>;
 }
 
 function unique<T extends string>(items: T[]) {

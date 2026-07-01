@@ -5,7 +5,7 @@ import { ProvisionResourceButton } from "@/components/ProvisionResourceButton";
 export default function ResourceCatalogPage() {
   return (
     <>
-      <PageHeader title="Resource Catalog" description="Marketplace of self-service infrastructure resources backed by typed mock data for future Crossplane claims." action={<ProvisionResourceButton label="Provision Resource" />} />
+      <PageHeader title="Resource Catalog" description="Self-service infrastructure catalog that generates Crossplane claims and opens GitOps pull requests for approval." action={<ProvisionResourceButton label="Provision through GitOps" />} />
       <ResourceCatalogView />
     </>
   );
