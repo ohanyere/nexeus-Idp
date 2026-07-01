@@ -63,7 +63,7 @@ export function ServiceResourceExplorer({ inventory }: ServiceResourceExplorerPr
               <h2 className="font-heading text-base font-semibold text-ink">Service Resource Explorer</h2>
             </div>
             <p className="mt-1 text-xs text-muted">
-              Kubernetes resources owned by this service. Mocked now, shaped for later Kubernetes API data.
+              Kubernetes resources owned by this service. Source: {inventory.source}{inventory.warning ? ` · ${inventory.warning}` : ""}.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -123,7 +123,7 @@ export function ServiceResourceExplorer({ inventory }: ServiceResourceExplorerPr
                         <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted">{formatKind(resource.kind)}</p>
                         <h4 className="mt-1 truncate text-sm font-semibold text-ink">{resource.name}</h4>
                       </div>
-                      <StatusBadge label={resource.status} tone={resource.tone} />
+                      <StatusBadge label={resource.status} tone={resource.tone} source={resource.source} />
                     </div>
                     <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-700">{resource.summary}</p>
                     <dl className="mt-3 grid gap-2 text-[0.68rem] text-muted">
@@ -164,7 +164,7 @@ export function ServiceResourceExplorer({ inventory }: ServiceResourceExplorerPr
                   <td className="px-3 py-2 text-xs text-slate-700">{formatKind(resource.kind)}</td>
                   <td className="max-w-[220px] truncate px-3 py-2 text-xs font-semibold text-slate-900">{resource.name}</td>
                   <td className="px-3 py-2 text-xs font-mono text-slate-700">{resource.namespace}</td>
-                  <td className="px-3 py-2 text-xs"><StatusBadge label={resource.status} tone={resource.tone} /></td>
+                  <td className="px-3 py-2 text-xs"><StatusBadge label={resource.status} tone={resource.tone} source={resource.source} /></td>
                   <td className="px-3 py-2 text-xs text-slate-700">{resource.desired ?? "N/A"}</td>
                   <td className="px-3 py-2 text-xs text-slate-700">{resource.current ?? "N/A"}</td>
                   <td className="px-3 py-2 text-xs text-muted">{resource.lastUpdated}</td>

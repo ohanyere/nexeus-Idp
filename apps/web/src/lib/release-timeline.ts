@@ -10,7 +10,10 @@ export type ReleaseEventType =
   | "pr"
   | "argocd"
   | "rollout"
-  | "rollback";
+  | "rollback"
+  | "provisioning"
+  | "policy"
+  | "audit";
 
 export type ReleaseEventStatus = "succeeded" | "running" | "waiting" | "failed" | "warning" | "blocked" | "requested";
 
@@ -26,7 +29,7 @@ export type ReleaseTimelineEvent = {
   time: string;
   status: ReleaseEventStatus;
   tone: StatusTone;
-  source: "GitHub" | "GitOps" | "ArgoCD" | "Argo Rollouts" | "Rollback";
+  source: "GitHub" | "GitOps" | "ArgoCD" | "Argo Rollouts" | "Rollback" | "Cluster" | "Crossplane" | "Kyverno" | "Audit" | "Mock";
   commit?: string;
   image?: string;
   prUrl?: string;
@@ -53,7 +56,7 @@ type PromotionMatch = {
   mergeStatus?: string;
 };
 
-const releaseEventOrder: ReleaseEventType[] = ["commit", "ci", "test", "image", "gitops", "pr", "argocd", "rollout", "rollback"];
+const releaseEventOrder: ReleaseEventType[] = ["commit", "ci", "test", "image", "gitops", "pr", "argocd", "rollout", "provisioning", "policy", "audit", "rollback"];
 
 export function getReleaseTimelineForService(serviceId: string) {
   const serviceDeployments = deployments.filter((deployment) => deployment.serviceId === serviceId);
@@ -87,7 +90,10 @@ export function releaseEventTypeLabel(type: ReleaseEventType) {
     pr: "PR",
     argocd: "ArgoCD",
     rollout: "Rollout",
-    rollback: "Rollback"
+    rollback: "Rollback",
+    provisioning: "Provisioning",
+    policy: "Policy",
+    audit: "Audit"
   };
 
   return labels[type];

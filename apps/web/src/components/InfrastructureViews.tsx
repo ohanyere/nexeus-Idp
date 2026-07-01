@@ -6,6 +6,7 @@ import { resourceCatalog, resourceTemplates } from "@/lib/infrastructure";
 import type { InfrastructureResourceType } from "@/lib/infrastructure";
 import type { EnvironmentName } from "@/lib/mock-data";
 import { statusTone } from "@/lib/status";
+import type { RuntimeSource } from "@/lib/server/runtime-status";
 import { Database, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -23,6 +24,9 @@ export type GitOpsProvisionRequestView = {
   gitOpsStatus: string;
   provisioningStatus: string;
   clusterStatus: string;
+  gitOpsSource?: RuntimeSource;
+  provisioningSource?: RuntimeSource;
+  clusterSource?: RuntimeSource;
   branch?: string | null;
   commitSha?: string | null;
   prUrl?: string | null;
@@ -126,9 +130,9 @@ export function ProvisionRequestsView({ requests, warning }: { requests: GitOpsP
                 <Td>{request.repositoryOwner}/{request.repositoryName}</Td>
                 <Td>{request.environment}</Td>
                 <Td>{request.resourceType} · {request.resourceName}</Td>
-                <Td><StatusBadge label={request.gitOpsStatus} tone={statusTone(request.gitOpsStatus)} /></Td>
-                <Td><StatusBadge label={request.provisioningStatus} tone={statusTone(request.provisioningStatus)} /></Td>
-                <Td><StatusBadge label={request.clusterStatus} tone={request.clusterStatus === "Not observed" ? "neutral" : statusTone(request.clusterStatus)} /></Td>
+                <Td><StatusBadge label={request.gitOpsStatus} tone={statusTone(request.gitOpsStatus)} source={request.gitOpsSource ?? "GitHub"} /></Td>
+                <Td><StatusBadge label={request.provisioningStatus} tone={statusTone(request.provisioningStatus)} source={request.provisioningSource ?? "ArgoCD"} /></Td>
+                <Td><StatusBadge label={request.clusterStatus} tone={request.clusterStatus === "Not observed" ? "neutral" : statusTone(request.clusterStatus)} source={request.clusterSource ?? "Crossplane"} /></Td>
                 <Td>{request.prUrl ? <a href={request.prUrl} target="_blank" rel="noreferrer" className="font-semibold text-brand hover:underline">PR #{request.prNumber}</a> : "Pending"}</Td>
               </tr>
             ))}</tbody>
@@ -187,7 +191,7 @@ export function ProvisionedResourcesView({ requests, warning }: { requests: GitO
             <thead className="bg-canvas"><tr>{["name", "type", "team", "service", "environment", "gitops status", "provisioning status", "cluster status", "claim path"].map((column) => <Th key={column}>{column}</Th>)}</tr></thead>
             <tbody className="divide-y divide-line bg-white">{filtered.map((resource) => (
               <tr key={resource.id} className="hover:bg-canvas">
-                <Td>{resource.resourceName}</Td><Td>{resource.resourceType}</Td><Td>{resource.teamName}</Td><Td>{resource.serviceName ?? "Team-level claim"}</Td><Td>{resource.environment}</Td><Td><StatusBadge label={resource.gitOpsStatus} tone={statusTone(resource.gitOpsStatus)} /></Td><Td><StatusBadge label={resource.provisioningStatus} tone={statusTone(resource.provisioningStatus)} /></Td><Td><StatusBadge label={resource.clusterStatus} tone={resource.clusterStatus === "Not observed" ? "neutral" : statusTone(resource.clusterStatus)} /></Td><Td>{resource.claimPath}</Td>
+                <Td>{resource.resourceName}</Td><Td>{resource.resourceType}</Td><Td>{resource.teamName}</Td><Td>{resource.serviceName ?? "Team-level claim"}</Td><Td>{resource.environment}</Td><Td><StatusBadge label={resource.gitOpsStatus} tone={statusTone(resource.gitOpsStatus)} source={resource.gitOpsSource ?? "GitHub"} /></Td><Td><StatusBadge label={resource.provisioningStatus} tone={statusTone(resource.provisioningStatus)} source={resource.provisioningSource ?? "ArgoCD"} /></Td><Td><StatusBadge label={resource.clusterStatus} tone={resource.clusterStatus === "Not observed" ? "neutral" : statusTone(resource.clusterStatus)} source={resource.clusterSource ?? "Crossplane"} /></Td><Td>{resource.claimPath}</Td>
               </tr>
             ))}</tbody>
           </table>

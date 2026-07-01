@@ -3,6 +3,8 @@ import type { GitOpsProvisionRequestView } from "@/components/InfrastructureView
 import { PageHeader } from "@/components/PageHeader";
 import { ProvisionResourceButton } from "@/components/ProvisionResourceButton";
 import { listInfrastructureProvisionRequests } from "@/lib/server/infrastructure-provisioning";
+import { getProvisionRuntimeOverlay } from "@/lib/server/runtime-status";
+import type { EnvironmentName } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +22,10 @@ export default async function ProvisionRequestsPage() {
 async function loadRequests() {
   try {
     const requests = await listInfrastructureProvisionRequests();
+    const views = await Promise.all(requests.map(toView));
 
     return {
-      requests: requests.map(toView),
+      requests: views,
       warning: undefined
     };
   } catch (error) {
@@ -33,7 +36,19 @@ async function loadRequests() {
   }
 }
 
-function toView(request: Awaited<ReturnType<typeof listInfrastructureProvisionRequests>>[number]): GitOpsProvisionRequestView {
+async function toView(request: Awaited<ReturnType<typeof listInfrastructureProvisionRequests>>[number]): Promise<GitOpsProvisionRequestView> {
+  const overlay = await getProvisionRuntimeOverlay({
+    repositoryName: request.repositoryName,
+    environment: isEnvironmentName(request.environment) ? request.environment : "dev",
+    namespace: request.namespace,
+    claimKind: request.claimKind,
+    claimName: request.claimName,
+    prNumber: request.prNumber,
+    gitOpsStatus: request.gitOpsStatus,
+    provisioningStatus: request.provisioningStatus,
+    clusterStatus: request.clusterStatus
+  });
+
   return {
     id: request.id,
     requester: request.requester,
@@ -42,9 +57,12 @@ function toView(request: Awaited<ReturnType<typeof listInfrastructureProvisionRe
     teamName: request.teamName,
     environment: request.environment,
     status: request.status,
-    gitOpsStatus: request.gitOpsStatus,
-    provisioningStatus: request.provisioningStatus,
-    clusterStatus: request.clusterStatus,
+    gitOpsStatus: overlay.gitOpsStatus ?? request.gitOpsStatus,
+    provisioningStatus: overlay.provisioningStatus ?? request.provisioningStatus,
+    clusterStatus: overlay.clusterStatus ?? request.clusterStatus,
+    gitOpsSource: overlay.gitOpsSource,
+    provisioningSource: overlay.provisioningSource,
+    clusterSource: overlay.clusterSource,
     branch: request.branch,
     commitSha: request.commitSha,
     prUrl: request.prUrl,
@@ -65,4 +83,8 @@ function toView(request: Awaited<ReturnType<typeof listInfrastructureProvisionRe
       createdAt: event.createdAt.toISOString()
     }))
   };
+}
+
+function isEnvironmentName(value: string): value is EnvironmentName {
+  return ["dev", "stage", "prod"].includes(value);
 }

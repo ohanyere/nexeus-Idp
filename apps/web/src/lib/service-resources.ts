@@ -27,11 +27,14 @@ export type ServiceKubernetesResource = {
   desired?: string;
   current?: string;
   lastUpdated: string;
+  source: "Cluster" | "Mock";
 };
 
 export type ServiceResourceInventory = {
   serviceId: string;
   generatedAt: string;
+  source: "Cluster" | "Mock";
+  warning?: string;
   resources: ServiceKubernetesResource[];
 };
 
@@ -45,6 +48,7 @@ export function getServiceResourceInventory(serviceId: string): ServiceResourceI
   return {
     serviceId,
     generatedAt: "Mocked at 10:32",
+    source: "Mock",
     resources
   };
 }
@@ -115,7 +119,8 @@ function resource(
     summary,
     desired,
     current,
-    lastUpdated
+    lastUpdated,
+    source: "Mock"
   };
 }
 

@@ -27,7 +27,7 @@ const defaultFilters: Filters = {
  status: "all"
 };
 
-const eventTypes: ReleaseEventType[] = ["commit", "ci", "test", "image", "gitops", "pr", "argocd", "rollout", "rollback"];
+const eventTypes: ReleaseEventType[] = ["commit", "ci", "test", "image", "gitops", "pr", "argocd", "rollout", "provisioning", "policy", "audit", "rollback"];
 const statuses: ReleaseEventStatus[] = ["succeeded", "running", "waiting", "failed", "warning", "blocked", "requested"];
 
 export function ReleaseTimelinePanel({
@@ -145,7 +145,7 @@ function TimelineEventItem({ event }: { event: ReleaseTimelineEvent }) {
  <span className="rounded-full bg-canvas px-2 py-0.5 text-[0.68rem] font-semibold uppercase text-slate-600">{event.environment}</span>
  <p className="truncate text-sm font-semibold text-ink">{event.label}</p>
  </div>
- <StatusBadge label={event.status} tone={event.tone} />
+ <StatusBadge label={event.status} tone={event.tone} source={eventSource(event.source)} />
  </div>
  <p className="mt-1 text-xs leading-5 text-slate-700">{event.detail}</p>
  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.68rem] font-medium text-muted">
@@ -174,7 +174,7 @@ function LogGroup({ log }: { log: ReleaseLogGroup }) {
  <h3 className="text-sm font-semibold text-ink">{log.title}</h3>
  <p className="mt-0.5 text-[0.68rem] font-medium text-muted">{releaseLogSourceLabel(log.source)} · {log.environment} · {log.release}</p>
  </div>
- <StatusBadge label={log.status} tone={log.tone} />
+ <StatusBadge label={log.status} tone={log.tone} source={log.source === "github-actions" ? "GitHub" : log.source === "argocd" ? "ArgoCD" : "Cluster"} />
  </div>
  <div className="max-h-56 overflow-auto bg-slate-950 p-3 font-mono text-[0.7rem] leading-5 text-slate-100">
  {log.lines.map((line, index) => (
@@ -234,7 +234,19 @@ function logSourceMatchesEventType(source: ReleaseLogSource, type: ReleaseEventT
  return ["gitops", "pr", "argocd"].includes(type);
  }
 
- return ["rollout", "rollback"].includes(type);
+ return ["rollout", "rollback", "provisioning", "policy", "audit"].includes(type);
+}
+
+function eventSource(source: ReleaseTimelineEvent["source"]) {
+ if (source === "Argo Rollouts" || source === "Rollback") {
+ return "Cluster";
+ }
+
+ if (source === "GitOps") {
+ return "ArgoCD";
+ }
+
+ return source;
 }
 
 function dotClass(tone: ReleaseTimelineEvent["tone"]) {

@@ -11,8 +11,10 @@ import { ServiceResourceExplorer } from "@/components/ServiceResourceExplorer";
 import { ServiceTopologyGraph } from "@/components/ServiceTopologyGraph";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getReleaseTimelineForService } from "@/lib/release-timeline";
+import type { ReleaseTimelineEvent } from "@/lib/release-timeline";
 import { getServiceResourceInventory } from "@/lib/service-resources";
 import { getPersistedService, toCatalogApiService } from "@/lib/server/catalog";
+import { getRuntimeStatus, type RuntimeSignal, type RuntimeStatusSnapshot } from "@/lib/server/runtime-status";
 import {
  auditLogs,
  deployments,
@@ -24,6 +26,7 @@ import {
  getTeamById,
  services
 } from "@/lib/mock-data";
+import type { EnvironmentName } from "@/lib/mock-data";
 import { statusTone } from "@/lib/status";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -58,8 +61,16 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  const promotion = getPromotionByServiceId(service.id);
  const detailedScorecard = getScorecardByServiceId(service.id);
  const teamServices = team ? services.filter((candidate) => candidate.teamId === team.id) : [service];
+ const runtime = await getRuntimeStatus({
+ serviceId: service.id,
+ serviceName: service.name,
+ repositoryUrl: service.documentation.repository,
+ dockerImage: deployments.find((deployment) => deployment.serviceId === service.id)?.image,
+ environments: service.environments
+ });
  const releaseTimeline = getReleaseTimelineForService(service.id);
- const resourceInventory = getServiceResourceInventory(service.id);
+ const releaseEvents = [...runtimeTimelineEvents(runtime, service.environment), ...releaseTimeline.events];
+ const resourceInventory = runtime.resourceInventory;
 
  const serviceDeployments = deployments
  .filter((deployment) => deployment.serviceId === service.id)
@@ -152,8 +163,10 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  </div>
  </section>
 
+ <RuntimeStatusPanel runtime={runtime} />
+
  <section id="topology" className="scroll-mt-16 overflow-x-auto">
- <ServiceTopologyGraph service={service} />
+ <ServiceTopologyGraph service={service} inventory={resourceInventory} />
  </section>
 
  <section className="grid scroll-mt-16 gap-6 xl:grid-cols-2">
@@ -193,7 +206,7 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  <ReleaseTimelinePanel
  title="Release Timeline"
  description={`Code, CI, GitOps, ArgoCD, rollout, and rollback activity for ${service.name}.`}
- events={releaseTimeline.events}
+ events={releaseEvents}
  logs={releaseTimeline.logs}
  />
  </section>
@@ -291,11 +304,21 @@ type PersistedServiceDetailProps = {
  service: ReturnType<typeof toCatalogApiService>;
 };
 
-function PersistedServiceDetail({ service }: PersistedServiceDetailProps) {
+async function PersistedServiceDetail({ service }: PersistedServiceDetailProps) {
+ const environments = service.environments.map((environment) => environment.name).filter(isEnvironmentName);
+ const runtime = await getRuntimeStatus({
+ serviceId: service.name,
+ serviceName: service.name,
+ repositoryOwner: service.repositoryOwner,
+ repositoryName: service.repositoryName,
+ repositoryUrl: service.repositoryUrl,
+ dockerImage: service.dockerImage,
+ environments: environments.length ? environments : ["dev"]
+ });
  const environmentRows = service.environments.map((environment) => ({
  environment: environment.name,
  version: environment.currentVersion,
- status: <StatusBadge label={environment.status} tone={statusTone(environment.status)} />
+ status: <StatusBadge label={environment.status} tone={statusTone(environment.status)} source="GitHub" />
  }));
  const capabilityRows = service.capabilities.map((capability) => ({
  capability: capability.name
@@ -303,7 +326,7 @@ function PersistedServiceDetail({ service }: PersistedServiceDetailProps) {
  const deploymentRows = service.deployments.map((deployment) => ({
  version: deployment.version,
  environment: deployment.environment,
- status: <StatusBadge label={deployment.status} tone={statusTone(deployment.status)} />,
+ status: <StatusBadge label={deployment.status} tone={statusTone(deployment.status)} source="GitHub" />,
  "commit SHA": deployment.commitSha,
  "image tag": deployment.imageTag,
  "deployed by": deployment.deployedBy,
@@ -357,6 +380,8 @@ function PersistedServiceDetail({ service }: PersistedServiceDetailProps) {
  </div>
  </section>
 
+ <RuntimeStatusPanel runtime={runtime} />
+
  <section className="grid gap-6">
  <article>
  <h2 className="mb-3 font-heading text-lg font-semibold text-ink">Environments</h2>
@@ -372,9 +397,77 @@ function PersistedServiceDetail({ service }: PersistedServiceDetailProps) {
  <h2 className="mb-3 font-heading text-lg font-semibold text-ink">Deployments</h2>
  <DataTable columns={["version", "environment", "status", "commit SHA", "image tag", "deployed by", "deployed at", "type"]} rows={deploymentRows} />
  </article>
+
+ <section id="resources" className="scroll-mt-16">
+ <ServiceResourceExplorer inventory={runtime.resourceInventory} />
+ </section>
  </section>
  </>
  );
+}
+
+function RuntimeStatusPanel({ runtime }: { runtime: RuntimeStatusSnapshot }) {
+ return (
+ <section className="grid gap-4 xl:grid-cols-2">
+ <RuntimeGroup title="GitHub" signals={runtime.github} />
+ <RuntimeGroup title="ArgoCD" signals={runtime.argocd} />
+ <RuntimeGroup title="Rollout" signals={runtime.rollout} />
+ <RuntimeGroup title="HPA" signals={runtime.hpa} />
+ <RuntimeGroup title="Pods" signals={runtime.pods} />
+ <RuntimeGroup title="Governance" signals={runtime.governance} />
+ {runtime.warnings.length ? (
+ <article className="console-panel rounded-md p-4 xl:col-span-2">
+ <h2 className="font-heading text-base font-semibold text-ink">Runtime Integration Messages</h2>
+ <div className="mt-3 grid gap-2">
+ {runtime.warnings.map((warning) => (
+ <p key={warning} className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">{warning}</p>
+ ))}
+ </div>
+ </article>
+ ) : null}
+ </section>
+ );
+}
+
+function RuntimeGroup({ title, signals }: { title: string; signals: RuntimeSignal[] }) {
+ return (
+ <article className="console-panel rounded-md p-4">
+ <h2 className="font-heading text-base font-semibold text-ink">{title}</h2>
+ <div className="mt-3 grid gap-2">
+ {signals.map((item) => (
+ <div key={`${title}-${item.label}`} className="flex items-start justify-between gap-3 rounded-md bg-canvas px-3 py-2 text-xs">
+ <div className="min-w-0">
+ <p className="font-medium text-muted">{item.label}</p>
+ <p className="mt-1 break-all font-semibold text-slate-900">{item.value}</p>
+ {item.detail ? <p className="mt-1 line-clamp-2 text-muted">{item.detail}</p> : null}
+ </div>
+ <StatusBadge label={item.value} tone={item.tone} source={item.source} />
+ </div>
+ ))}
+ </div>
+ </article>
+ );
+}
+
+function runtimeTimelineEvents(runtime: RuntimeStatusSnapshot, environment: EnvironmentName): ReleaseTimelineEvent[] {
+ return runtime.timelineEvents.map((event) => ({
+ id: event.id,
+ serviceId: runtime.serviceId,
+ deploymentId: `${runtime.serviceId}-runtime`,
+ release: "runtime",
+ environment,
+ type: event.source === "Kyverno" ? "policy" : event.source === "Crossplane" ? "provisioning" : event.source === "Audit" ? "audit" : event.source === "ArgoCD" ? "argocd" : event.source === "Cluster" ? "rollout" : "ci",
+ label: event.label,
+ detail: event.detail,
+ time: event.time,
+ status: event.status,
+ tone: event.tone,
+ source: event.source
+ }));
+}
+
+function isEnvironmentName(value: string): value is EnvironmentName {
+ return ["dev", "stage", "prod"].includes(value);
 }
 
 function MetaTerm({ label, value }: { label: string; value: string }) {
