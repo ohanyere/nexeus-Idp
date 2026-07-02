@@ -1,7 +1,5 @@
 import { TopologyGraph } from "@/components/topology/TopologyGraph";
-import { getTopologyByServiceId } from "@/components/topology/mockTopology";
 import type { ServiceTopology, TopologyEdgeKind, TopologyNodeKind } from "@/components/topology/types";
-import { getProvisionedResourcesForService } from "@/lib/infrastructure";
 import type { Service } from "@/lib/mock-data";
 import type { ServiceResourceInventory } from "@/lib/service-resources";
 
@@ -11,7 +9,7 @@ type ServiceTopologyGraphProps = {
 };
 
 export function ServiceTopologyGraph({ service, inventory }: ServiceTopologyGraphProps) {
- return <TopologyGraph topology={liveTopology(service, inventory) ?? withProvisionedResources(getTopologyByServiceId(service.id), service.id)} />;
+ return <TopologyGraph topology={liveTopology(service, inventory)} emptyMessage={inventory?.warning ?? "No runtime resources found."} />;
 }
 
 function liveTopology(service: Service, inventory?: ServiceResourceInventory): ServiceTopology | undefined {
@@ -64,51 +62,6 @@ function liveTopology(service: Service, inventory?: ServiceResourceInventory): S
  environments: service.environments,
  nodes: [serviceNode, ...nodes],
  edges
- };
-}
-
-function withProvisionedResources(topology: ServiceTopology | undefined, serviceId: string) {
- if (!topology) {
- return topology;
- }
-
- const linkedResources = getProvisionedResourcesForService(serviceId);
-
- if (!linkedResources.length) {
- return topology;
- }
-
- const nodes = linkedResources.map((resource, index) => ({
- id: `infra-${resource.id}`,
- name: resource.name,
- kind: topologyKind(resource.type),
- health: resource.status === "Failed" ? "failed" as const : resource.status === "Provisioning" || resource.status === "Pending" ? "warning" as const : "healthy" as const,
- owner: resource.owner,
- environment: resource.environment,
- runtime: resource.provider,
- description: `${resource.type} provisioned through Self-Service Infrastructure.`,
- connectedServices: [serviceId],
- position: {
- x: 150 + index * 230,
- y: 560
- }
- }));
- const edges = linkedResources.map((resource) => {
- const kind = edgeKind(resource.type);
- return {
- id: `${serviceId}-infra-${resource.id}`,
- source: serviceId,
- target: `infra-${resource.id}`,
- kind,
- label: resource.type,
- direction: "depends-on" as const
- };
- });
-
- return {
- ...topology,
- nodes: [...topology.nodes, ...nodes],
- edges: [...topology.edges, ...edges]
  };
 }
 

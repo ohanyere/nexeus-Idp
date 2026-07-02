@@ -1,31 +1,27 @@
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { mockNotifications } from "@/lib/auth";
 
 export default function NotificationsPage() {
+  const categories = ["Deployment", "Approval", "Rollback", "Policy", "Invitation"];
+
   return (
     <>
-      <PageHeader title="Notifications" description="Mock notification center for deployments, approvals, rollbacks, policy violations, and team invitations." />
+      <PageHeader title="Notifications" description="Notifications from configured runtime and workflow integrations." />
       <section className="grid gap-3 md:grid-cols-5">
-        {["Deployment", "Approval", "Rollback", "Policy", "Invitation"].map((category) => (
+        {categories.map((category) => (
           <div key={category} className="console-panel rounded-md p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{category}</p>
-            <p className="mt-2 text-2xl font-semibold text-ink">{mockNotifications.filter((notification) => notification.category === category).length}</p>
+            <p className="mt-2 text-2xl font-semibold text-ink">0</p>
           </div>
         ))}
       </section>
-      <section className="console-panel rounded-md">
-        <div className="divide-y divide-line">
-          {mockNotifications.map((notification) => (
-            <article key={notification.id} className="grid gap-3 px-4 py-3 md:grid-cols-[160px_minmax(0,1fr)_auto] md:items-center">
-              <p className="text-xs font-semibold uppercase text-muted">{notification.category}</p>
-              <div className="min-w-0">
-                <h2 className="truncate text-sm font-semibold text-ink">{notification.title}</h2>
-                <p className="mt-1 text-xs text-muted">{notification.detail} · {notification.time}</p>
-              </div>
-              <StatusBadge label={notification.status} tone={notification.status === "Unread" ? "warning" : "neutral"} />
-            </article>
-          ))}
+      <section className="console-panel rounded-md p-6">
+        <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+          <StatusBadge label="No notifications yet" tone="neutral" source="Seed" />
+          <div>
+            <h2 className="text-sm font-semibold text-ink">No notifications yet</h2>
+            <p className="mt-1 text-sm text-muted">Runtime notification delivery is not configured for this workspace.</p>
+          </div>
         </div>
       </section>
     </>

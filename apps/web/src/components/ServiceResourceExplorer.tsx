@@ -28,6 +28,10 @@ const statuses: KubernetesResourceStatus[] = ["Healthy", "Progressing", "Pending
 
 export function ServiceResourceExplorer({ inventory }: ServiceResourceExplorerProps) {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const hasResources = inventory.resources.length > 0;
+  const integrationMessage = inventory.warning?.includes("not configured")
+    ? "Integration not configured"
+    : inventory.warning;
   const filteredResources = useMemo(
     () => inventory.resources.filter((resource) => {
       const environmentMatch = filters.environment === "all" || resource.environment === filters.environment;
@@ -62,9 +66,8 @@ export function ServiceResourceExplorer({ inventory }: ServiceResourceExplorerPr
               <Boxes className="h-4 w-4 text-slate-500" aria-hidden="true" />
               <h2 className="font-heading text-base font-semibold text-ink">Service Resource Explorer</h2>
             </div>
-            <p className="mt-1 text-xs text-muted">
-              Kubernetes resources owned by this service. Source: {inventory.source}{inventory.warning ? ` · ${inventory.warning}` : ""}.
-            </p>
+            <p className="mt-1 text-xs text-muted">Kubernetes resources owned by this service. Source: {inventory.source}.</p>
+            {integrationMessage ? <p className="mt-1 text-xs font-medium text-amber-700">{integrationMessage}</p> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select
@@ -108,7 +111,9 @@ export function ServiceResourceExplorer({ inventory }: ServiceResourceExplorerPr
       </div>
 
       <div className="grid gap-5 p-4">
-        {groupedResources.map((group) => (
+        {!hasResources ? (
+          <EmptyState label={integrationMessage ?? "No runtime resources found."} />
+        ) : groupedResources.map((group) => (
           <section key={group.environment} className="min-w-0">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{group.environment}</h3>
@@ -173,6 +178,7 @@ export function ServiceResourceExplorer({ inventory }: ServiceResourceExplorerPr
             </tbody>
           </table>
         </div>
+        {hasResources && filteredResources.length === 0 ? <EmptyState label="No runtime resources match these filters." /> : null}
       </div>
     </section>
   );

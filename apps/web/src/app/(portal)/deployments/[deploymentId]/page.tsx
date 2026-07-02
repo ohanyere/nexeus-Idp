@@ -3,8 +3,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { ReleaseTimelinePanel } from "@/components/ReleaseTimelinePanel";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
-import { deployments } from "@/lib/mock-data";
-import { getReleaseTimelineForDeployment } from "@/lib/release-timeline";
+import { deployments, getServiceById } from "@/lib/mock-data";
+import type { EnvironmentName } from "@/lib/mock-data";
+import type { ReleaseTimelineEvent } from "@/lib/release-timeline";
+import { getRuntimeStatus, type RuntimeStatusSnapshot } from "@/lib/server/runtime-status";
 import { statusTone } from "@/lib/status";
 import { notFound } from "next/navigation";
 
@@ -14,9 +16,7 @@ type DeploymentDetailPageProps = {
  }>;
 };
 
-export function generateStaticParams() {
- return deployments.map((deployment) => ({ deploymentId: deployment.id }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function DeploymentDetailPage({ params }: DeploymentDetailPageProps) {
  const { deploymentId } = await params;
@@ -26,28 +26,28 @@ export default async function DeploymentDetailPage({ params }: DeploymentDetailP
  notFound();
  }
 
- const logGroups = [
- deployment.logs.githubActions,
- deployment.logs.imageScan,
- deployment.logs.argoCd,
- deployment.logs.kubernetes,
- deployment.logs.kyverno,
- deployment.logs.argoRollouts
- ];
- const releaseTimeline = getReleaseTimelineForDeployment(deployment.id);
+ const service = getServiceById(deployment.serviceId);
+ const runtime = await getRuntimeStatus({
+ serviceId: deployment.serviceId,
+ serviceName: deployment.service,
+ repositoryUrl: service?.documentation.repository,
+ dockerImage: deployment.image,
+ environments: service?.environments ?? [deployment.environment]
+ });
+ const releaseEvents = runtimeTimelineEvents(runtime, deployment.environment);
 
  return (
  <>
  <PageHeader
  eyebrow="Deployment detail"
  title={`${deployment.service} ${deployment.version}`}
- description="Mock operational detail for build, image, GitOps, rollout, policy, application logs, and rollback intent."
+ description="Deployment catalog detail with runtime release status read from configured integrations."
  action={<RollbackButton deployment={deployment} />}
  />
 
  <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
  <StatCard label="Environment" value={deployment.environment} detail="Deployment target" />
- <StatCard label="Status" value={deployment.status} detail="Mock deployment state" tone={deployment.tone} />
+ <StatCard label="Status" value={deployment.status} detail="Demo deployment record" tone={deployment.tone} />
  <StatCard label="Deployment type" value={deployment.deploymentType} detail={deployment.rolloutStrategy} />
  <StatCard label="Deployed by" value={deployment.deployedBy} detail={deployment.deployedAt} />
  </section>
@@ -95,22 +95,25 @@ export default async function DeploymentDetailPage({ params }: DeploymentDetailP
  <ReleaseTimelinePanel
  title="Release Timeline"
  description={`Code, CI, GitOps, ArgoCD, rollout, and rollback activity for ${deployment.service} ${deployment.version}.`}
- events={releaseTimeline.events}
- logs={releaseTimeline.logs}
+ events={releaseEvents}
+ logs={[]}
  compact
  />
 
- <section className="grid gap-4 xl:grid-cols-2">
- {logGroups.map((group) => (
- <article key={group.title} className="console-panel rounded-md p-5">
- <h2 className="font-heading text-lg font-semibold text-ink">{group.title}</h2>
- <div className="mt-4 rounded-md bg-slate-950 p-4 font-mono text-xs leading-6 text-slate-100">
- {group.lines.map((line) => (
- <p key={line}>$ {line}</p>
+ {runtime.warnings.length ? (
+ <section className="console-panel rounded-md p-5">
+ <h2 className="font-heading text-lg font-semibold text-ink">Runtime Integration Messages</h2>
+ <div className="mt-3 grid gap-2">
+ {runtime.warnings.map((warning) => (
+ <p key={warning} className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">{warning.includes("not configured") ? "Integration not configured" : warning}</p>
  ))}
  </div>
- </article>
- ))}
+ </section>
+ ) : null}
+
+ <section className="console-panel rounded-md p-5">
+ <h2 className="font-heading text-lg font-semibold text-ink">Deployment logs</h2>
+ <p className="mt-2 rounded-md border border-line bg-canvas px-4 py-3 text-sm text-muted">No deployment logs found from configured integrations.</p>
  </section>
  </div>
 
@@ -149,4 +152,21 @@ export default async function DeploymentDetailPage({ params }: DeploymentDetailP
  </section>
  </>
  );
+}
+
+function runtimeTimelineEvents(runtime: RuntimeStatusSnapshot, environment: EnvironmentName): ReleaseTimelineEvent[] {
+ return runtime.timelineEvents.map((event) => ({
+ id: event.id,
+ serviceId: runtime.serviceId,
+ deploymentId: `${runtime.serviceId}-runtime`,
+ release: "runtime",
+ environment,
+ type: event.source === "Kyverno" ? "policy" : event.source === "Crossplane" ? "provisioning" : event.source === "ArgoCD" ? "argocd" : event.source === "Cluster" ? "rollout" : "ci",
+ label: event.label,
+ detail: event.detail,
+ time: event.time,
+ status: event.status,
+ tone: event.tone,
+ source: event.source
+ }));
 }

@@ -1,7 +1,7 @@
 import { DataTable } from "@/components/DataTable";
 import { RollbackButton, ViewLogsButton } from "@/components/DeploymentActions";
 import { EnvironmentPromotion } from "@/components/EnvironmentPromotion";
-import { ServicePolicyCompactStatus, ServicePolicyPanel } from "@/components/GovernanceViews";
+import { ServicePolicyPanel, ServicePolicyRuntimeStatus } from "@/components/GovernanceViews";
 import { OwnershipGraph } from "@/components/OwnershipGraph";
 import { PageHeader } from "@/components/PageHeader";
 import { ProvisionResourceButton } from "@/components/ProvisionResourceButton";
@@ -10,11 +10,9 @@ import { ServiceDetailTabs } from "@/components/ServiceDetailTabs";
 import { ServiceResourceExplorer } from "@/components/ServiceResourceExplorer";
 import { ServiceTopologyGraph } from "@/components/ServiceTopologyGraph";
 import { StatusBadge } from "@/components/StatusBadge";
-import { getReleaseTimelineForService } from "@/lib/release-timeline";
 import type { ReleaseTimelineEvent } from "@/lib/release-timeline";
-import { getServiceResourceInventory } from "@/lib/service-resources";
 import { getPersistedService, toCatalogApiService } from "@/lib/server/catalog";
-import { getRuntimeStatus, type RuntimeSignal, type RuntimeStatusSnapshot } from "@/lib/server/runtime-status";
+import { getGovernanceRuntimeSnapshot, getRuntimeStatus, type RuntimeSignal, type RuntimeStatusSnapshot } from "@/lib/server/runtime-status";
 import {
  auditLogs,
  deployments,
@@ -37,9 +35,7 @@ type ServiceDetailPageProps = {
  }>;
 };
 
-export function generateStaticParams() {
- return services.map((service) => ({ serviceId: service.id }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function ServiceDetailPage({ params }: ServiceDetailPageProps) {
  const { serviceId } = await params;
@@ -61,15 +57,17 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  const promotion = getPromotionByServiceId(service.id);
  const detailedScorecard = getScorecardByServiceId(service.id);
  const teamServices = team ? services.filter((candidate) => candidate.teamId === team.id) : [service];
- const runtime = await getRuntimeStatus({
+ const [runtime, governanceSnapshot] = await Promise.all([
+ getRuntimeStatus({
  serviceId: service.id,
  serviceName: service.name,
  repositoryUrl: service.documentation.repository,
  dockerImage: deployments.find((deployment) => deployment.serviceId === service.id)?.image,
  environments: service.environments
- });
- const releaseTimeline = getReleaseTimelineForService(service.id);
- const releaseEvents = [...runtimeTimelineEvents(runtime, service.environment), ...releaseTimeline.events];
+ }),
+ getGovernanceRuntimeSnapshot()
+ ]);
+ const releaseEvents = runtimeTimelineEvents(runtime, service.environment);
  const resourceInventory = runtime.resourceInventory;
 
  const serviceDeployments = deployments
@@ -142,7 +140,7 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  <div className="flex flex-wrap items-center gap-2">
  <StatusBadge label={service.healthStatus} tone={service.healthTone} />
  <StatusBadge label={service.deploymentStatus} tone={service.deploymentTone} />
- <ServicePolicyCompactStatus serviceId={service.id} />
+ <ServicePolicyRuntimeStatus serviceId={service.id} snapshot={governanceSnapshot} />
  {service.environments.map((environment) => (
  <span key={environment} className="rounded-md border border-line bg-canvas px-2 py-0.5 text-xs font-medium text-slate-700">{environment}</span>
  ))}
@@ -207,7 +205,7 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  title="Release Timeline"
  description={`Code, CI, GitOps, ArgoCD, rollout, and rollback activity for ${service.name}.`}
  events={releaseEvents}
- logs={releaseTimeline.logs}
+ logs={[]}
  />
  </section>
 
@@ -222,7 +220,7 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  </section>
 
  <section id="policy" className="scroll-mt-16">
- <ServicePolicyPanel serviceId={service.id} />
+ <ServicePolicyPanel serviceId={service.id} snapshot={governanceSnapshot} />
  </section>
 
  <article>
@@ -456,7 +454,7 @@ function runtimeTimelineEvents(runtime: RuntimeStatusSnapshot, environment: Envi
  deploymentId: `${runtime.serviceId}-runtime`,
  release: "runtime",
  environment,
- type: event.source === "Kyverno" ? "policy" : event.source === "Crossplane" ? "provisioning" : event.source === "Audit" ? "audit" : event.source === "ArgoCD" ? "argocd" : event.source === "Cluster" ? "rollout" : "ci",
+ type: event.source === "Kyverno" ? "policy" : event.source === "Crossplane" ? "provisioning" : event.source === "ArgoCD" ? "argocd" : event.source === "Cluster" ? "rollout" : "ci",
  label: event.label,
  detail: event.detail,
  time: event.time,

@@ -82,6 +82,35 @@ export type PolicyEvent = {
   tone: StatusTone;
 };
 
+export type RuntimePolicyViolation = {
+  id: string;
+  policy: string;
+  serviceId: string;
+  service: string;
+  team: string;
+  environment: EnvironmentName;
+  severity: PolicySeverity;
+  status: "open" | "warning" | "error";
+  resource: string;
+  namespace: string;
+  lastSeenAt: string;
+  remediation: string;
+  auditEvent: string;
+  source: "Kyverno";
+};
+
+export type GovernanceRuntimeSnapshot = {
+  source: "Kyverno";
+  attempted: boolean;
+  warning?: string;
+  policyReportCount: number;
+  passCount: number;
+  warnCount: number;
+  failCount: number;
+  errorCount: number;
+  violations: RuntimePolicyViolation[];
+};
+
 export const policyCatalog: PolicyCatalogItem[] = [
   {
     id: "require-resource-limits",

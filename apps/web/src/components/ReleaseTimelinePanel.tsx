@@ -246,6 +246,10 @@ function eventSource(source: ReleaseTimelineEvent["source"]) {
  return "ArgoCD";
  }
 
+ if (source === "Audit") {
+ return "Seed";
+ }
+
  return source;
 }
 

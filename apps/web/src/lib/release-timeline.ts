@@ -29,7 +29,7 @@ export type ReleaseTimelineEvent = {
   time: string;
   status: ReleaseEventStatus;
   tone: StatusTone;
-  source: "GitHub" | "GitOps" | "ArgoCD" | "Argo Rollouts" | "Rollback" | "Cluster" | "Crossplane" | "Kyverno" | "Audit" | "Mock";
+  source: "GitHub" | "GitOps" | "ArgoCD" | "Argo Rollouts" | "Rollback" | "Cluster" | "Crossplane" | "Kyverno" | "Audit" | "Seed" | "Demo";
   commit?: string;
   image?: string;
   prUrl?: string;

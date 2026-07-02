@@ -1,8 +1,13 @@
 import { PolicyViolationsView } from "@/components/GovernanceViews";
 import { PageHeader } from "@/components/PageHeader";
+import { getGovernanceRuntimeSnapshot } from "@/lib/server/runtime-status";
 import Link from "next/link";
 
-export default function GovernanceViolationsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function GovernanceViolationsPage() {
+  const snapshot = await getGovernanceRuntimeSnapshot();
+
   return (
     <>
       <PageHeader
@@ -15,7 +20,7 @@ export default function GovernanceViolationsPage() {
           </Link>
         }
       />
-      <PolicyViolationsView />
+      <PolicyViolationsView snapshot={snapshot} />
     </>
   );
 }

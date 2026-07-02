@@ -4,10 +4,10 @@ import type { StatusTone } from "@/lib/mock-data";
 type StatusBadgeProps = {
  label: string;
  tone?: StatusTone;
- source?: "GitHub" | "ArgoCD" | "Cluster" | "Crossplane" | "Kyverno" | "Audit" | "Mock";
+ source?: "GitHub" | "ArgoCD" | "Cluster" | "Crossplane" | "Kyverno" | "Seed" | "Demo";
 };
 
-export function StatusBadge({ label, tone = "neutral", source = "Mock" }: StatusBadgeProps) {
+export function StatusBadge({ label, tone = "neutral", source = "Demo" }: StatusBadgeProps) {
  return (
  <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium ${toneClasses(tone)}`}>
  <span>{label}</span>

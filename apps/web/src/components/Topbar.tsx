@@ -1,7 +1,6 @@
 "use client";
 
 import { useMockSession } from "@/components/MockSessionContext";
-import { mockNotifications } from "@/lib/auth";
 import { mockRoles, navigation, teams } from "@/lib/mock-data";
 import type { MockRole } from "@/lib/mock-data";
 import { Bell, ChevronDown, LogOut, Search, UserCircle } from "lucide-react";
@@ -14,7 +13,6 @@ export function Topbar() {
  const { selectedTeam, selectedTeamId, setSelectedTeamId, selectedRole, setSelectedRole, user, can, signOut } = useMockSession();
  const pathname = usePathname();
  const [menuOpen, setMenuOpen] = useState(false);
- const unread = mockNotifications.filter((notification) => notification.status === "Unread").length;
  const visibleNavigation = navigation.filter((item) => !item.permission || can(item.permission));
 
  return (
@@ -55,7 +53,6 @@ export function Topbar() {
  aria-label="Notifications"
  >
  <Bell className="h-4 w-4" aria-hidden="true" />
- {unread ? <span className="absolute mt-[-1.15rem] ml-5 h-2 w-2 rounded-full bg-red-600" /> : null}
  </Link>
  <div className="hidden text-right sm:block">
  <p className="text-sm font-semibold text-ink">{user.name}</p>

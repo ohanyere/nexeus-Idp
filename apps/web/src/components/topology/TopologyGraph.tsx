@@ -10,6 +10,7 @@ import { useCallback, useMemo, useState } from "react";
 
 type TopologyGraphProps = {
  topology?: ServiceTopology;
+ emptyMessage?: string;
 };
 
 const nodeTypes = {
@@ -32,15 +33,15 @@ const edgeStyle: Record<TopologyEdgeKind, { stroke: string; dash?: string; anima
  storage: { stroke: "#24292f", dash: "1 5" }
 };
 
-export function TopologyGraph({ topology }: TopologyGraphProps) {
+export function TopologyGraph({ topology, emptyMessage }: TopologyGraphProps) {
  return (
  <ReactFlowProvider>
- <TopologyGraphInner topology={topology} />
+ <TopologyGraphInner topology={topology} emptyMessage={emptyMessage} />
  </ReactFlowProvider>
  );
 }
 
-function TopologyGraphInner({ topology }: TopologyGraphProps) {
+function TopologyGraphInner({ topology, emptyMessage = "No runtime resources found." }: TopologyGraphProps) {
  const [filters, setFilters] = useState<TopologyFilters>(defaultFilters);
  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(topology?.nodes[0]?.id ?? null);
  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -179,10 +180,10 @@ function TopologyGraphInner({ topology }: TopologyGraphProps) {
  <section className="console-panel overflow-hidden rounded-md">
  <div className="border-b border-line px-4 py-3">
  <h2 className="font-heading text-base font-semibold text-ink">Service topology</h2>
- <p className="mt-1 text-xs text-muted">No dependencies have been registered.</p>
+ <p className="mt-1 text-xs text-muted">{emptyMessage}</p>
  </div>
  <div className="flex min-h-[360px] items-center justify-center bg-canvas px-6 text-center text-sm text-slate-600">
- No dependencies have been registered.
+ {emptyMessage}
  </div>
  </section>
  );

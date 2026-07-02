@@ -2,12 +2,13 @@ import "server-only";
 
 import { Octokit } from "@octokit/rest";
 
+import type { GovernanceRuntimeSnapshot, PolicySeverity, RuntimePolicyViolation } from "@/lib/governance";
 import type { EnvironmentName, StatusTone } from "@/lib/mock-data";
 import type { ServiceKubernetesResource, ServiceResourceInventory, KubernetesResourceKind, KubernetesResourceStatus } from "@/lib/service-resources";
-import { getServiceResourceInventory, kubernetesResourceStatusTone } from "@/lib/service-resources";
+import { kubernetesResourceStatusTone } from "@/lib/service-resources";
 import { statusTone } from "@/lib/status";
 
-export type RuntimeSource = "GitHub" | "ArgoCD" | "Cluster" | "Crossplane" | "Kyverno" | "Audit" | "Mock";
+export type RuntimeSource = "GitHub" | "ArgoCD" | "Cluster" | "Crossplane" | "Kyverno" | "Seed" | "Demo";
 
 export type RuntimeSignal = {
   label: string;
@@ -95,6 +96,36 @@ type KubernetesObject = {
   };
 };
 
+type PolicyReportResult = {
+  policy?: string;
+  rule?: string;
+  result?: string;
+  severity?: string;
+  message?: string;
+  source?: string;
+  resources?: Array<{
+    kind?: string;
+    name?: string;
+    namespace?: string;
+  }>;
+};
+
+type PolicyReport = {
+  metadata?: KubernetesMetadata;
+  scope?: {
+    kind?: string;
+    name?: string;
+    namespace?: string;
+  };
+  summary?: {
+    pass?: number;
+    fail?: number;
+    warn?: number;
+    error?: number;
+  };
+  results?: PolicyReportResult[];
+};
+
 type ArgoApplication = {
   metadata?: {
     name?: string;
@@ -122,8 +153,8 @@ const sourceUnavailable: Record<RuntimeSource, string> = {
   Cluster: "KUBERNETES_API_URL and Kubernetes bearer token are not configured.",
   Crossplane: "Kubernetes API access is required to read Crossplane claims.",
   Kyverno: "Kubernetes API access is required to read Kyverno PolicyReports.",
-  Audit: "Audit events are not configured for this runtime adapter.",
-  Mock: "Using mock fallback data."
+  Seed: "Catalog seed data is available, but it is not live runtime state.",
+  Demo: "Demo data is available, but it is not live runtime state."
 };
 
 function signal(label: string, value: string, source: RuntimeSource, detail?: string): RuntimeSignal {
@@ -225,7 +256,7 @@ async function getGitHubSignals(input: RuntimeServiceInput) {
 
   if (!client || !repo) {
     return {
-      signals: [unavailable("Last Commit", "GitHub"), unavailable("Workflow Status", "GitHub"), signal("Container Image", input.dockerImage ?? "Unknown", "Mock", "Image is inferred from catalog data.")],
+      signals: [unavailable("Last Commit", "GitHub"), unavailable("Workflow Status", "GitHub"), signal("Container Image", input.dockerImage ?? "Unknown", "Seed", "Image is inferred from catalog data.")],
       warnings: [sourceUnavailable.GitHub],
       events: []
     };
@@ -274,7 +305,7 @@ async function getGitHubSignals(input: RuntimeServiceInput) {
     const warning = `GitHub runtime status unavailable: ${error instanceof Error ? error.message : "Unknown GitHub error."}`;
 
     return {
-      signals: [unavailable("Last Commit", "GitHub", warning), unavailable("Workflow Status", "GitHub", warning), signal("Container Image", input.dockerImage ?? "Unknown", "Mock", "Image is inferred from catalog data.")],
+      signals: [unavailable("Last Commit", "GitHub", warning), unavailable("Workflow Status", "GitHub", warning), signal("Container Image", input.dockerImage ?? "Unknown", "Seed", "Image is inferred from catalog data.")],
       warnings: [warning],
       events: []
     };
@@ -436,15 +467,20 @@ function clusterResource(input: {
   };
 }
 
+function emptyClusterInventory(serviceId: string, warning?: string): ServiceResourceInventory {
+  return {
+    serviceId,
+    generatedAt: new Date().toISOString(),
+    source: "Cluster",
+    warning,
+    resources: []
+  };
+}
+
 async function getClusterInventory(input: RuntimeServiceInput): Promise<{ inventory: ServiceResourceInventory; warnings: string[]; rollout: RuntimeSignal[]; hpa: RuntimeSignal[]; pods: RuntimeSignal[]; events: RuntimeStatusSnapshot["timelineEvents"] }> {
   if (!kubernetesConfig()) {
-    const fallback = getServiceResourceInventory(input.serviceId);
-
     return {
-      inventory: {
-        ...fallback,
-        warning: sourceUnavailable.Cluster
-      },
+      inventory: emptyClusterInventory(input.serviceId, sourceUnavailable.Cluster),
       warnings: [sourceUnavailable.Cluster],
       rollout: [unavailable("Rollout Phase", "Cluster"), unavailable("Rollout Health", "Cluster")],
       hpa: [unavailable("HPA Current", "Cluster"), unavailable("HPA Desired", "Cluster"), unavailable("CPU", "Cluster"), unavailable("Memory", "Cluster")],
@@ -612,16 +648,14 @@ async function getClusterInventory(input: RuntimeServiceInput): Promise<{ invent
   }
 
   if (resources.length === 0) {
-    const fallback = getServiceResourceInventory(input.serviceId);
+    const warning = warnings.join(" ") || undefined;
+
     return {
-      inventory: {
-        ...fallback,
-        warning: warnings.join(" ") || "No live Kubernetes resources were discovered."
-      },
-      warnings: warnings.length ? warnings : ["No live Kubernetes resources were discovered."],
+      inventory: emptyClusterInventory(input.serviceId, warning),
+      warnings,
       rollout: [unavailable("Rollout Phase", "Cluster", "No live rollout was discovered."), unavailable("Rollout Health", "Cluster", "No live rollout was discovered.")],
       hpa: [unavailable("HPA Current", "Cluster", "No live HPA was discovered."), unavailable("HPA Desired", "Cluster", "No live HPA was discovered."), unavailable("CPU", "Cluster", "No live HPA metrics were discovered."), unavailable("Memory", "Cluster", "No live HPA metrics were discovered.")],
-      pods: [unavailable("Running Pods", "Cluster", "No live pods were discovered."), unavailable("Pending Pods", "Cluster", "No live pods were discovered."), unavailable("Failed Pods", "Cluster", "No live pods were discovered.")],
+      pods: [signal("Running Pods", "0", "Cluster", "No live pods were discovered."), signal("Pending Pods", "0", "Cluster", "No live pods were discovered."), signal("Failed Pods", "0", "Cluster", "No live pods were discovered.")],
       events
     };
   }
@@ -698,6 +732,110 @@ async function getGovernanceSignals(input: RuntimeServiceInput) {
   };
 }
 
+function policySeverity(value?: string): PolicySeverity {
+  if (value === "critical" || value === "high" || value === "medium" || value === "low") {
+    return value;
+  }
+
+  return "medium";
+}
+
+function environmentFromNamespace(namespace?: string): EnvironmentName {
+  if (namespace?.endsWith("-prod")) {
+    return "prod";
+  }
+
+  if (namespace?.endsWith("-stage")) {
+    return "stage";
+  }
+
+  return "dev";
+}
+
+function serviceFromNamespace(namespace?: string) {
+  return namespace?.replace(/-(dev|stage|prod)$/, "") || "unknown-service";
+}
+
+function resourceName(result: PolicyReportResult, report: PolicyReport) {
+  const resource = result.resources?.[0] ?? report.scope;
+  const kind = resource?.kind ?? "Resource";
+  const name = resource?.name ?? report.metadata?.name ?? "unknown";
+
+  return `${kind}/${name}`;
+}
+
+function policyReportViolation(report: PolicyReport, result: PolicyReportResult, index: number): RuntimePolicyViolation {
+  const namespace = result.resources?.[0]?.namespace ?? report.scope?.namespace ?? report.metadata?.namespace ?? "cluster";
+  const serviceId = serviceFromNamespace(namespace);
+  const status = result.result === "error" ? "error" : result.result === "warn" ? "warning" : "open";
+
+  return {
+    id: `${namespace}-${report.metadata?.name ?? "policyreport"}-${index}`,
+    policy: result.policy ?? result.rule ?? report.metadata?.name ?? "PolicyReport finding",
+    serviceId,
+    service: serviceId,
+    team: "Unknown",
+    environment: environmentFromNamespace(namespace),
+    severity: policySeverity(result.severity),
+    status,
+    resource: resourceName(result, report),
+    namespace,
+    lastSeenAt: report.metadata?.creationTimestamp ?? "Unknown",
+    remediation: result.message ?? "Review the reported policy finding in Kyverno.",
+    auditEvent: result.source ?? "PolicyReport",
+    source: "Kyverno"
+  };
+}
+
+export async function getGovernanceRuntimeSnapshot(): Promise<GovernanceRuntimeSnapshot> {
+  if (!kubernetesConfig()) {
+    return {
+      source: "Kyverno",
+      attempted: false,
+      warning: sourceUnavailable.Kyverno,
+      policyReportCount: 0,
+      passCount: 0,
+      warnCount: 0,
+      failCount: 0,
+      errorCount: 0,
+      violations: []
+    };
+  }
+
+  try {
+    const reportList = await kubeGet<KubernetesList<PolicyReport>>("/apis/wgpolicyk8s.io/v1alpha2/policyreports");
+    const reports = reportList?.items ?? [];
+    const violations = reports.flatMap((report) =>
+      (report.results ?? [])
+        .filter((result) => ["fail", "warn", "error"].includes(result.result ?? ""))
+        .map((result, index) => policyReportViolation(report, result, index))
+    );
+
+    return {
+      source: "Kyverno",
+      attempted: true,
+      policyReportCount: reports.length,
+      passCount: reports.reduce((sum, report) => sum + (report.summary?.pass ?? 0), 0),
+      warnCount: reports.reduce((sum, report) => sum + (report.summary?.warn ?? 0), 0),
+      failCount: reports.reduce((sum, report) => sum + (report.summary?.fail ?? 0), 0),
+      errorCount: reports.reduce((sum, report) => sum + (report.summary?.error ?? 0), 0),
+      violations
+    };
+  } catch (error) {
+    return {
+      source: "Kyverno",
+      attempted: true,
+      warning: `Kyverno PolicyReports unavailable: ${error instanceof Error ? error.message : "Unknown Kyverno error."}`,
+      policyReportCount: 0,
+      passCount: 0,
+      warnCount: 0,
+      failCount: 0,
+      errorCount: 0,
+      violations: []
+    };
+  }
+}
+
 export async function getRuntimeStatus(input: RuntimeServiceInput): Promise<RuntimeStatusSnapshot> {
   const [github, argocd, cluster, governance] = await Promise.all([
     getGitHubSignals(input),
@@ -755,7 +893,7 @@ export async function getProvisionRuntimeOverlay(input: {
 
   if (!argoConfig()) {
     warnings.push(sourceUnavailable.ArgoCD);
-    provisioningSource = "Mock";
+    provisioningStatus = "Integration not configured";
   } else {
     try {
       const app = await fetchArgoApplication(`${input.repositoryName}-${input.environment}`);
@@ -768,13 +906,13 @@ export async function getProvisionRuntimeOverlay(input: {
       }
     } catch (error) {
       warnings.push(`ArgoCD provision status unavailable: ${error instanceof Error ? error.message : "Unknown ArgoCD error."}`);
-      provisioningSource = "Mock";
+      provisioningStatus = "No ArgoCD application found";
     }
   }
 
   if (!kubernetesConfig()) {
     warnings.push(sourceUnavailable.Crossplane);
-    clusterSource = "Mock";
+    clusterStatus = "Integration not configured";
   } else {
     try {
       const plural = pluralForClaimKind(input.claimKind);
@@ -793,7 +931,7 @@ export async function getProvisionRuntimeOverlay(input: {
       }
     } catch (error) {
       warnings.push(`Crossplane claim status unavailable: ${error instanceof Error ? error.message : "Unknown Crossplane error."}`);
-      clusterSource = "Mock";
+      clusterStatus = "No Crossplane claims found";
     }
   }
 
