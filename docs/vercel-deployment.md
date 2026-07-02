@@ -1,0 +1,97 @@
+# Vercel Deployment
+
+This guide deploys `apps/web` to Vercel with GitHub OAuth, managed PostgreSQL, GitHub automation, and runtime integration warnings that fail closed when credentials are missing.
+
+## Project Settings
+
+- Root directory: `apps/web`
+- Install command: `npm install`
+- Build command: `npm run build`
+- Output: Next.js default
+
+The web package runs `prisma generate` from `postinstall`, so Vercel installs generate the Prisma client before `next build`.
+
+If you deploy from the monorepo root instead, use:
+
+```bash
+npm run build -w apps/web
+```
+
+## Required Environment Variables
+
+Set these in Vercel project settings for Production, Preview, and Development as appropriate.
+
+```bash
+NEXT_PUBLIC_AUTH_MODE=github
+NEXTAUTH_URL=https://your-vercel-app.example.com
+AUTH_SECRET=
+AUTH_GITHUB_ID=
+AUTH_GITHUB_SECRET=
+DATABASE_URL=
+GITHUB_TOKEN=
+GITHUB_ORG=
+GITHUB_TEMPLATE_OWNER=
+GITHUB_TEMPLATE_REPO_GO_API=
+GITHUB_TEMPLATE_REPO_NODE_API=
+GITHUB_TEMPLATE_REPO_PYTHON_API=
+GITHUB_TEMPLATE_REPO_NEXTJS_FRONTEND=
+GITHUB_TEMPLATE_REPO_WORKER_SERVICE=
+DOCKERHUB_USERNAME=
+DOCKERHUB_TOKEN=
+ARGOCD_BASE_URL=
+ARGOCD_TOKEN=
+KUBERNETES_API_URL=
+KUBERNETES_BEARER_TOKEN=
+```
+
+Use a managed PostgreSQL database for `DATABASE_URL`; do not use localhost, Docker, or a workstation-only database for Vercel. Vercel Postgres, Neon, Supabase Postgres, RDS PostgreSQL, and Cloud SQL PostgreSQL are all suitable.
+
+## GitHub OAuth
+
+Create a GitHub OAuth app with:
+
+- Homepage URL: the Vercel app URL
+- Authorization callback URL: `https://your-vercel-app.example.com/api/auth/callback/github`
+
+Then set:
+
+- `AUTH_GITHUB_ID`: OAuth app client ID
+- `AUTH_GITHUB_SECRET`: OAuth app client secret
+- `AUTH_SECRET`: a long random secret for Auth.js session signing
+- `NEXTAUTH_URL`: the canonical deployed URL
+
+Local demo mode can use `NEXT_PUBLIC_AUTH_MODE=mock`; do not use mock mode for production.
+
+## Database
+
+Run migrations against the managed database before a production demo or release:
+
+```bash
+npm run prisma:generate -w apps/web
+npm run prisma:migrate -w apps/web
+npm run prisma:seed -w apps/web
+```
+
+Use `prisma migrate deploy` instead of `prisma migrate dev` for a locked production release process if you add that script.
+
+## Runtime Integration Behavior
+
+Missing runtime credentials do not produce fake success data. The app should show warnings or empty states such as:
+
+- `Integration not configured`
+- `No ArgoCD application found`
+- `No runtime resources found`
+- `No Crossplane claims found`
+- `No PolicyReports found`
+
+This is expected for a partially configured Vercel environment.
+
+## Deployment Checklist
+
+- `NEXT_PUBLIC_AUTH_MODE` is `github`.
+- GitHub OAuth callback URL matches the deployed URL.
+- `DATABASE_URL` points to managed PostgreSQL.
+- Prisma migrations have been applied to the target database.
+- GitHub automation variables are present if Create Service, release snapshots, promotions, or rollbacks must be live.
+- ArgoCD and Kubernetes variables are present if runtime state must be live.
+- `npm run typecheck -w apps/web`, `npm run lint -w apps/web`, and `npm run build -w apps/web` pass locally before deploy.
