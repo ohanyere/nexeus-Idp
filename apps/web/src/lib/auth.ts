@@ -18,6 +18,12 @@ export type AuthenticatedUser = {
   lastActive: string;
 };
 
+export type ExternalAuthIdentity = {
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+};
+
 export type MockAuthSession = {
   user: AuthenticatedUser;
   authenticated: boolean;
@@ -117,6 +123,45 @@ export function createMockSession(userId = "user-avery", authenticated = true, p
     authenticated,
     provider,
     expires: "2026-07-01T00:00:00.000Z"
+  };
+}
+
+export function findMockUserForIdentity(identity: ExternalAuthIdentity) {
+  const email = identity.email?.trim().toLowerCase();
+
+  if (email) {
+    const emailMatch = mockUsers.find((user) => user.email.toLowerCase() === email);
+
+    if (emailMatch) {
+      return emailMatch;
+    }
+  }
+
+  const name = identity.name?.trim().toLowerCase();
+
+  if (name) {
+    const nameMatch = mockUsers.find((user) => user.name.toLowerCase() === name);
+
+    if (nameMatch) {
+      return nameMatch;
+    }
+  }
+
+  return mockUsers[0];
+}
+
+export function mapAuthIdentityToUser(identity: ExternalAuthIdentity): AuthenticatedUser {
+  const mappedUser = findMockUserForIdentity(identity);
+  const name = identity.name?.trim() || mappedUser.name;
+  const email = identity.email?.trim() || mappedUser.email;
+
+  return {
+    ...mappedUser,
+    name,
+    email,
+    avatar: initials(name),
+    status: "Active",
+    lastActive: "Now"
   };
 }
 

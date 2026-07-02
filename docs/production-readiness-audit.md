@@ -1,6 +1,6 @@
 # Production Readiness Audit
 
-Date: 2026-07-01
+Date: 2026-07-02
 
 This audit inspected the current `senior-idp-platform` workspace for production readiness, mock boundaries, required integrations, Vercel readiness, and local dependencies. No application behavior was changed.
 
@@ -8,7 +8,7 @@ This audit inspected the current `senior-idp-platform` workspace for production 
 
 Can this deploy to Vercel today?
 
-Yes for a controlled demo deployment, if Vercel is configured for the `apps/web` workspace and all required environment variables point to real external services. No for production or job-application-grade usage as-is, because authentication, signup, RBAC enforcement, infrastructure provisioning, governance results, topology, resource explorer, notifications, logs, and broad search are still mock-only or mostly mock-only.
+Yes for a controlled deployment, if Vercel is configured for the `apps/web` workspace and all required environment variables point to real external services. GitHub OAuth is implemented through Auth.js, but API route authorization, signup/invitations, notifications, broad search, and several operational integrations still need production hardening.
 
 What database should be used for production?
 
@@ -16,7 +16,7 @@ Use a managed PostgreSQL database. The app already uses Prisma with a PostgreSQL
 
 Is signup real or mock?
 
-Signup is not implemented as a real flow. The current login page writes a mock session to browser localStorage. There is no real user registration, password verification, email verification, provider callback, invite acceptance, or persisted session creation.
+Signup is not implemented as a real flow. Production login uses Auth.js with GitHub OAuth. Local mock login is only available when `NEXT_PUBLIC_AUTH_MODE=mock`. There is no real user registration, email verification, invite acceptance, or durable account-management flow yet.
 
 Should Auth.js, Firebase, or Supabase Auth be used?
 
@@ -25,6 +25,7 @@ Use Auth.js for this app unless the product direction intentionally moves all au
 ## Real integrations
 
 - Service catalog persistence uses Prisma and PostgreSQL through `DATABASE_URL`.
+- Authentication uses Auth.js GitHub OAuth when `NEXT_PUBLIC_AUTH_MODE=github`.
 - Create Service can call GitHub through Octokit to generate or reuse a repository from a template, personalize files, configure Docker Hub Actions secrets, add fleet discovery topics, register fleet metadata, and persist the created service.
 - Release management for catalog-backed services can read GitHub repository overlays and open promotion PRs through Octokit.
 - Rollback can find a previous overlay image tag and open a rollback PR through Octokit.
@@ -33,10 +34,9 @@ Use Auth.js for this app unless the product direction intentionally moves all au
 
 ## Mock-only areas
 
-- Authentication/login is mock-only. Provider buttons only activate a mock localStorage session.
 - Signup is absent.
-- Session persistence is localStorage-only and not server trusted.
-- RBAC is client-side mock role selection. It hides UI controls but does not protect API routes.
+- Local demo login is mock-only and gated by `NEXT_PUBLIC_AUTH_MODE=mock`.
+- RBAC is preserved through mapped mock/team records after GitHub login. It still hides UI controls but does not protect mutation API routes yet.
 - Infrastructure provisioning UI is mock-only and explicitly states that no Crossplane, Kubernetes, AWS, or Terraform call runs.
 - Governance UI is typed fixture data from `apps/web/src/lib/governance.ts`; it is not reading Kyverno, OPA Gatekeeper, CI scan output, or cluster policy reports.
 - Resource explorer is generated from mock deployment/resource data and is shaped for a later Kubernetes API adapter.
@@ -53,11 +53,21 @@ Use Auth.js for this app unless the product direction intentionally moves all au
 - Deployments/release management: catalog-backed rows and GitHub overlay snapshots are real when database and GitHub are configured; demo rows remain the fallback.
 - Promotion and rollback: API routes create PRs through GitHub, but caller identity and authorization are not real yet.
 - Audit log: Create Service and promotion/rollback can write audit rows, but many UI audit/timeline views still read mock data.
-- Database usage: Prisma models cover users, teams, services, environments, capabilities, deployments, and audit logs. They do not yet cover durable auth sessions, OAuth accounts, resource claims, policy results, topology, notifications, search indexes, or governance findings.
+- Database usage: Prisma models cover users, teams, services, environments, capabilities, deployments, and audit logs. Auth.js currently uses JWT sessions, so Prisma does not yet store OAuth accounts or revocable server-side sessions.
 
 ## Required environment variables
 
-Required for database-backed service catalog:
+Required for auth mode:
+
+- `NEXT_PUBLIC_AUTH_MODE`
+
+Required for Auth.js GitHub OAuth:
+
+- `AUTH_SECRET`
+- `AUTH_GITHUB_ID`
+- `AUTH_GITHUB_SECRET`
+
+Required for database-backed service catalog and Vercel managed Postgres:
 
 - `DATABASE_URL`
 
@@ -77,16 +87,15 @@ Required for configuring generated repository CI secrets:
 - `DOCKERHUB_USERNAME`
 - `DOCKERHUB_TOKEN`
 
-Needed once GitHub OAuth is made real:
+Required for ArgoCD runtime/release state:
 
-- `AUTH_SECRET` or `NEXTAUTH_SECRET`
-- `AUTH_URL` or `NEXTAUTH_URL`
-- `GITHUB_CLIENT_ID`
-- `GITHUB_CLIENT_SECRET`
+- `ARGOCD_BASE_URL`
+- `ARGOCD_TOKEN`
 
-Likely needed for real Crossplane and governance integrations:
+Required for Kubernetes, Crossplane, and Kyverno runtime reads:
 
-- Kubernetes API endpoint and service account credentials, or an in-cluster identity for an API worker
+- `KUBERNETES_API_URL`
+- `KUBERNETES_BEARER_TOKEN`
 - Target cluster name/context
 - Crossplane claim namespace and allowed compositions
 - Kyverno PolicyReport/ClusterPolicyReport read credentials
@@ -94,11 +103,10 @@ Likely needed for real Crossplane and governance integrations:
 
 ## Vercel blockers
 
-- Production auth is not implemented. Vercel can host the UI, but access control would be demo-only.
 - `DATABASE_URL` must point to managed PostgreSQL, not localhost or Docker.
-- Vercel must receive every GitHub and Docker Hub secret listed above for real service creation and release operations.
+- Vercel must receive every Auth.js, GitHub, ArgoCD, Kubernetes, and Docker Hub secret listed above for real login, service creation, release operations, and runtime reads.
 - There is no explicit Vercel config in the repo. Configure Vercel with `apps/web` as the app root, or set the build command to target the workspace.
-- Prisma generation must be reliable in Vercel builds. The current package has `prisma:generate`, but no `postinstall` or build pre-step that guarantees generation on Vercel. Recommended build command: `npm run prisma:generate -w apps/web && npm run build -w apps/web`, or add an equivalent package script before production deployment.
+- Prisma generation runs from the `apps/web` `postinstall` script. Recommended build command remains `npm run build -w apps/web` from the repository root or `npm run build` when Vercel root is `apps/web`.
 - Mutation APIs are not server-authorized. `/api/services/create`, `/api/promotions`, and `/api/rollbacks` validate request shape but do not enforce a real authenticated user, tenant, team, or permission.
 - Crossplane, Kubernetes, Kyverno, OPA, ArgoCD, Argo Rollouts, Loki, Prometheus, and notification providers are not connected.
 - Some static/demo pages are acceptable for portfolio demos, but they should be clearly labeled or replaced before a production-readiness demo.
@@ -130,15 +138,12 @@ npm run prisma:migrate -w apps/web
 npm run prisma:seed -w apps/web
 ```
 
-## What must change for GitHub OAuth login
+## Remaining auth hardening
 
-- Add Auth.js dependencies and an auth route such as `app/api/auth/[...nextauth]/route.ts`.
-- Configure the GitHub provider with `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `AUTH_SECRET`, and `AUTH_URL`.
-- Add a production session strategy, preferably Prisma adapter tables if server-side revocation and account linkage matter.
-- Replace `MockSessionContext`, `AuthGate`, localStorage session reads, and login button mock handlers with Auth.js `signIn`, `signOut`, and server session reads.
 - Move authorization checks to server routes, server components, middleware, or a shared server helper. UI hiding can stay, but it cannot be the enforcement boundary.
-- Map GitHub identity to app users, teams, roles, and environment access. This can be done from allowed org/team membership, a maintained user/team table, or an admin invitation flow.
-- Remove the mock role selector from production builds.
+- Replace temporary GitHub-to-mock-user mapping with durable user/team records, GitHub org/team membership checks, or an admin invitation flow.
+- Add Auth.js Prisma adapter tables if server-side revocation and OAuth account linkage matter.
+- Remove the role selector from production builds after team/role administration is real.
 
 ## What must change for real Crossplane claim submission
 
@@ -162,9 +167,9 @@ npm run prisma:seed -w apps/web
 
 ## Recommended production sequence
 
-1. Add Auth.js GitHub OAuth and server-enforced RBAC.
-2. Move Vercel to managed Postgres and make Prisma generation part of the build.
-3. Protect mutation APIs with authenticated user, tenant/team scope, and permission checks.
+1. Add server-enforced RBAC to mutation APIs using the Auth.js session.
+2. Move Vercel to managed Postgres and run migrations/seeding intentionally for the target environment.
+3. Replace temporary GitHub-to-mock-user mapping with durable users, teams, invitations, and org/team checks.
 4. Replace infrastructure provisioning mock submission with persisted Crossplane claims.
 5. Replace governance fixtures with Kyverno/OPA/CI result ingestion.
 6. Replace mock deployment details/logs/resource explorer/topology with adapters or clearly labeled demo fallbacks.
@@ -175,6 +180,6 @@ npm run prisma:seed -w apps/web
 
 The app is strong as an IDP portfolio demo if the demo story explicitly says which parts are real:
 
-- Real: GitHub repository generation path, persisted service catalog, GitHub promotion/rollback PR path, Prisma/Postgres persistence.
-- Demo fallback: release rows when no catalog data exists, mock operational logs, governance, infrastructure, topology, notifications, search, and auth.
-- Not production-ready: identity, authorization, provisioning, governance evidence, cluster state, notification delivery, and deployment/log observability.
+- Real: Auth.js GitHub OAuth, GitHub repository generation path, persisted service catalog, GitHub promotion/rollback PR path, Prisma/Postgres persistence.
+- Demo fallback: release rows when no catalog data exists, mock operational logs, governance, infrastructure, topology, notifications, search, and local mock login when `NEXT_PUBLIC_AUTH_MODE=mock`.
+- Not production-ready: server-enforced authorization, durable user administration, provisioning, governance evidence, cluster state, notification delivery, and deployment/log observability.

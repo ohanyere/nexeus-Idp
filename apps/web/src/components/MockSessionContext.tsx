@@ -1,9 +1,11 @@
 "use client";
 
-import { clearMockSession, createMockSession, mockUsers, readStoredMockSession } from "@/lib/auth";
+import { clearMockSession, createMockSession, mapAuthIdentityToUser, mockUsers, readStoredMockSession } from "@/lib/auth";
 import type { AuthenticatedUser, AuthProviderId, MockAuthSession } from "@/lib/auth";
+import { getAuthMode } from "@/lib/auth-mode";
 import { rolePermissions, teams } from "@/lib/mock-data";
 import type { MockRole, Permission } from "@/lib/mock-data";
+import { SessionProvider, signOut as signOutAuth, useSession } from "next-auth/react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -25,15 +27,49 @@ type MockSessionContextValue = {
 const MockSessionContext = createContext<MockSessionContextValue | null>(null);
 
 export function MockSessionProvider({ children }: { children: ReactNode }) {
+ return (
+ <SessionProvider refetchOnWindowFocus={false}>
+ <SessionContextBridge>{children}</SessionContextBridge>
+ </SessionProvider>
+ );
+}
+
+function SessionContextBridge({ children }: { children: ReactNode }) {
+ const authMode = getAuthMode();
+ const nextAuthSession = useSession();
  const [selectedUserId, setUserId] = useState("user-avery");
  const [authenticated, setAuthenticated] = useState(false);
  const [provider, setProvider] = useState<AuthProviderId>("email");
  const [sessionReady, setSessionReady] = useState(false);
- const baseSession = createMockSession(selectedUserId, authenticated, provider);
  const [selectedTeamId, setSelectedTeamId] = useState("platform-engineering");
  const [selectedRole, setSelectedRole] = useState<MockRole>("Platform Admin");
+ const authUser = useMemo(() => {
+ if (authMode !== "github" || !nextAuthSession.data?.user) {
+  return null;
+ }
+
+ return mapAuthIdentityToUser(nextAuthSession.data.user);
+ }, [authMode, nextAuthSession.data?.user]);
+ const baseSession = createMockSession(authUser?.id ?? selectedUserId, authMode === "github" ? nextAuthSession.status === "authenticated" : authenticated, authMode === "github" ? "github" : provider);
 
  useEffect(() => {
+ if (authMode === "github") {
+  if (nextAuthSession.status === "authenticated" && authUser) {
+  setUserId(authUser.id);
+  setSelectedTeamId(authUser.teamId);
+  setSelectedRole(authUser.role);
+  setAuthenticated(true);
+  setProvider("github");
+  }
+
+  if (nextAuthSession.status === "unauthenticated") {
+  setAuthenticated(false);
+  }
+
+  setSessionReady(nextAuthSession.status !== "loading");
+  return;
+ }
+
  const stored = readStoredMockSession();
 
  if (stored) {
@@ -46,7 +82,7 @@ export function MockSessionProvider({ children }: { children: ReactNode }) {
  }
 
  setSessionReady(true);
- }, []);
+ }, [authMode, authUser, nextAuthSession.status]);
 
  const selectedTeam = teams.find((team) => team.id === selectedTeamId) ?? teams[0];
  const user = useMemo<AuthenticatedUser>(() => ({
@@ -73,6 +109,11 @@ export function MockSessionProvider({ children }: { children: ReactNode }) {
  users: mockUsers,
  setUserId,
  signOut: () => {
+  if (authMode === "github") {
+  void signOutAuth({ callbackUrl: "/login" });
+  return;
+  }
+
   clearMockSession();
   setAuthenticated(false);
   if (typeof window !== "undefined") {
@@ -80,7 +121,7 @@ export function MockSessionProvider({ children }: { children: ReactNode }) {
   }
  },
  can: (permission: Permission) => rolePermissions[selectedRole].includes(permission)
- }), [selectedRole, selectedTeam, selectedTeamId, session, sessionReady, user]);
+ }), [authMode, selectedRole, selectedTeam, selectedTeamId, session, sessionReady, user]);
 
  return (
  <MockSessionContext.Provider value={value}>

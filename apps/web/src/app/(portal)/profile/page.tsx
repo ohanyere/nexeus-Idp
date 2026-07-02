@@ -9,7 +9,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="User Profile" description="Mock authenticated identity, team assignment, permissions, and personal preferences." />
+      <PageHeader title="User Profile" description="Authenticated identity, mapped team assignment, permissions, and personal preferences." />
       <section className="grid gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
         <aside className="console-panel rounded-md p-5">
           <div className="flex h-16 w-16 items-center justify-center rounded-md bg-slate-950 text-xl font-semibold text-white">{user.avatar}</div>

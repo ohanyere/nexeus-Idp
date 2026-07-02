@@ -45,13 +45,13 @@ export default function AccessControlPage() {
  <>
  <PageHeader
  title="Access control"
- description="Mock RBAC model for tenant/team scoped roles and visual permission behavior. No real authentication is connected."
+ description="RBAC model for tenant/team scoped roles and visual permission behavior. GitHub identities map to these records until durable user administration is added."
  />
 
  <section className="grid gap-4 md:grid-cols-4">
- <StatCard label="Users" value={String(mockUsers.length)} detail="Mock authenticated identities" />
+ <StatCard label="Users" value={String(mockUsers.length)} detail="Mapped identities" />
  <StatCard label="Roles" value={String(mockRoles.length)} detail="Admin, Engineer, Lead, Developer, Viewer" />
- <StatCard label="Permissions" value={String(rbacPermissions.length)} detail="Mock action grants" />
+ <StatCard label="Permissions" value={String(rbacPermissions.length)} detail="Action grants" />
  <StatCard label="Current role" value={selectedRole} detail={selectedTeam.name} />
  </section>
 

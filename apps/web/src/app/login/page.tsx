@@ -2,16 +2,33 @@
 
 import { activateMockSession, authProviders } from "@/lib/auth";
 import type { AuthProviderId } from "@/lib/auth";
+import { getAuthMode } from "@/lib/auth-mode";
 import { SquareStack } from "lucide-react";
+import { signIn as signInAuth } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
+  const authMode = getAuthMode();
+  const mockMode = authMode === "mock";
+
+  function nextPath() {
+    if (typeof window === "undefined") {
+      return "/dashboard";
+    }
+
+    return new URLSearchParams(window.location.search).get("next") || "/dashboard";
+  }
 
   function signIn(provider: AuthProviderId = "email") {
+    if (!mockMode) {
+      void signInAuth("github", { callbackUrl: nextPath() });
+      return;
+    }
+
     activateMockSession("user-avery", provider);
-    router.replace("/dashboard");
+    router.replace(nextPath());
   }
 
   return (
@@ -31,7 +48,7 @@ export default function LoginPage() {
             Sign in to manage services, teams, releases, and platform access from one enterprise workspace.
           </p>
           <div className="mt-8 grid max-w-xl gap-3 text-sm text-slate-700">
-            <p className="rounded-md border border-line bg-white p-3">Mock authentication today, provider-ready architecture for GitHub, Google, Microsoft Entra ID, Keycloak, and Okta tomorrow.</p>
+            <p className="rounded-md border border-line bg-white p-3">GitHub OAuth secures production access. Local demo mode is available only when NEXT_PUBLIC_AUTH_MODE is set to mock.</p>
             <p className="rounded-md border border-line bg-white p-3">Permissions, teams, and environment access drive what users see inside the portal.</p>
           </div>
         </div>
@@ -55,9 +72,9 @@ export default function LoginPage() {
             </div>
           </div>
           <h2 className="font-heading text-xl font-semibold text-ink">Sign in</h2>
-          <p className="mt-1 text-sm text-muted">Use mock credentials or a mocked enterprise provider.</p>
+          <p className="mt-1 text-sm text-muted">{mockMode ? "Use local demo credentials." : "Use GitHub OAuth to access the platform."}</p>
 
-          <div className="mt-5 grid gap-3">
+          {mockMode ? <div className="mt-5 grid gap-3">
             <label className="grid gap-1.5 text-sm font-medium text-slate-800">
               Email
               <input className="h-10 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200" defaultValue="avery.morgan@example.com" type="email" />
@@ -76,16 +93,16 @@ export default function LoginPage() {
             <button type="submit" className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">
               Sign In
             </button>
-          </div>
+          </div> : null}
 
-          <div className="my-5 flex items-center gap-3">
+          {mockMode ? <div className="my-5 flex items-center gap-3">
             <span className="h-px flex-1 bg-line" />
             <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted">or</span>
             <span className="h-px flex-1 bg-line" />
-          </div>
+          </div> : null}
 
           <div className="grid gap-2">
-            {authProviders.map((provider) => (
+            {(mockMode ? authProviders : authProviders.filter((provider) => provider.id === "github")).map((provider) => (
               <button key={provider.id} type="button" onClick={() => signIn(provider.id)} className="inline-flex h-10 items-center justify-center rounded-md border border-line bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-canvas">
                 {provider.label}
               </button>

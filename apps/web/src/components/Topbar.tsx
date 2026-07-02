@@ -36,7 +36,7 @@ export function Topbar() {
  </select>
  </label>
  <label className="hidden gap-1 text-xs font-medium text-muted xl:grid">
- Mock role
+ Role
  <select
  value={selectedRole}
  onChange={(event) => setSelectedRole(event.target.value as MockRole)}
