@@ -1,10 +1,30 @@
 import "server-only";
 
 import type { NextAuthOptions } from "next-auth";
-import GitHubProvider from "next-auth/providers/github";
+import GitHubProvider, { type GithubEmail, type GithubProfile } from "next-auth/providers/github";
 
 import { findMockUserForIdentity } from "@/lib/auth";
 import { getAuthMode } from "@/lib/auth-mode";
+
+const defaultGitHubOAuthTimeoutMs = 10_000;
+
+function getGitHubOAuthTimeoutMs() {
+  const raw = process.env.AUTH_GITHUB_OAUTH_TIMEOUT_MS;
+
+  if (!raw) {
+    return defaultGitHubOAuthTimeoutMs;
+  }
+
+  const parsed = Number(raw);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return defaultGitHubOAuthTimeoutMs;
+  }
+
+  return Math.trunc(parsed);
+}
+
+const githubOAuthTimeoutMs = getGitHubOAuthTimeoutMs();
 
 export const authOptions: NextAuthOptions = {
   pages: {
@@ -18,7 +38,45 @@ export const authOptions: NextAuthOptions = {
     ? [
         GitHubProvider({
           clientId: process.env.AUTH_GITHUB_ID ?? "",
-          clientSecret: process.env.AUTH_GITHUB_SECRET ?? ""
+          clientSecret: process.env.AUTH_GITHUB_SECRET ?? "",
+          checks: ["state"],
+          httpOptions: {
+            timeout: githubOAuthTimeoutMs
+          },
+          userinfo: {
+            url: "https://api.github.com/user",
+            async request({ client, tokens }) {
+              const accessToken = tokens.access_token;
+
+              if (!accessToken) {
+                throw new Error("GitHub OAuth response did not include an access token.");
+              }
+
+              const profile = await client.userinfo<GithubProfile>(accessToken);
+
+              if (!profile.email) {
+                try {
+                  const res = await fetch("https://api.github.com/user/emails", {
+                    headers: {
+                      Authorization: `token ${accessToken}`
+                    },
+                    signal: AbortSignal.timeout(githubOAuthTimeoutMs)
+                  });
+
+                  if (res.ok) {
+                    const emails = (await res.json()) as GithubEmail[];
+                    profile.email = (emails.find((email) => email.primary) ?? emails[0])?.email ?? null;
+                  }
+                } catch (error) {
+                  console.warn("GitHub OAuth email lookup failed; continuing with profile response.", {
+                    error: error instanceof Error ? error.message : "Unknown GitHub email lookup error."
+                  });
+                }
+              }
+
+              return profile;
+            }
+          }
         })
       ]
     : [],

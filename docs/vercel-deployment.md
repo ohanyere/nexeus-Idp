@@ -27,6 +27,7 @@ NEXTAUTH_URL=https://your-vercel-app.example.com
 AUTH_SECRET=
 AUTH_GITHUB_ID=
 AUTH_GITHUB_SECRET=
+AUTH_GITHUB_OAUTH_TIMEOUT_MS=10000
 DATABASE_URL=
 GITHUB_TOKEN=
 GITHUB_ORG=
@@ -59,8 +60,11 @@ Then set:
 - `AUTH_GITHUB_SECRET`: OAuth app client secret
 - `AUTH_SECRET`: a long random secret for Auth.js session signing
 - `NEXTAUTH_URL`: the canonical deployed URL
+- `AUTH_GITHUB_OAUTH_TIMEOUT_MS`: optional OAuth callback HTTP timeout in milliseconds. The app defaults to `10000`, which raises the underlying Auth.js/OpenID client timeout above its `3500ms` default.
 
 Local demo mode can use `NEXT_PUBLIC_AUTH_MODE=mock`; do not use mock mode for production.
+
+In local development, especially on WSL or slow VPN/network connections, GitHub may authorize successfully and then the Auth.js callback can fail with `OAUTH_CALLBACK_ERROR outgoing request timed out after 3500ms` while exchanging the code or loading the GitHub profile. Keep `NEXT_PUBLIC_AUTH_MODE=github`, confirm `NEXTAUTH_URL=http://localhost:3000`, and raise `AUTH_GITHUB_OAUTH_TIMEOUT_MS` in `apps/web/.env.local` if `10000` is still too low. This setting only changes server-side outbound OAuth HTTP waits; it does not disable GitHub OAuth, remove state checks, or change the Vercel callback URL.
 
 ## Database
 
