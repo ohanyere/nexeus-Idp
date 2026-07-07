@@ -175,6 +175,8 @@ export type Team = {
   escalationContacts: string[];
 };
 
+const mockGitHubOwner = process.env.NEXT_PUBLIC_GITHUB_ORG || process.env.NEXT_PUBLIC_GITHUB_OWNER || process.env.GITHUB_ORG || process.env.GITHUB_OWNER || "github-owner-not-configured";
+
 export const navigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, group: "Platform" },
   { name: "Teams", href: "/teams", icon: Users, group: "Platform" },
@@ -278,9 +280,9 @@ export const services: Service[] = [
     currentVersion: "v1.18.4",
     monthlyCost: "$12,860",
     description: "Handles payment authorization, capture, refund orchestration, and provider webhooks.",
-    repository: "github.com/acme/payments-api",
+    repository: `github.com/${mockGitHubOwner}/payments-api`,
     documentation: {
-      repository: "https://github.com/acme/payments-api",
+      repository: `https://github.com/${mockGitHubOwner}/payments-api`,
       runbook: "https://docs.example.com/runbooks/payments-api",
       apiDocs: "https://docs.example.com/apis/payments-api",
       eventDocs: "https://docs.example.com/events/payment-events",
@@ -311,9 +313,9 @@ export const services: Service[] = [
     currentVersion: "v2.7.3",
     monthlyCost: "$9,740",
     description: "Coordinates cart validation, order creation, payment initiation, and checkout completion.",
-    repository: "github.com/acme/checkout-service",
+    repository: `github.com/${mockGitHubOwner}/checkout-service`,
     documentation: {
-      repository: "https://github.com/acme/checkout-service",
+      repository: `https://github.com/${mockGitHubOwner}/checkout-service`,
       runbook: "https://docs.example.com/runbooks/checkout-service",
       apiDocs: "https://docs.example.com/apis/checkout-service",
       eventDocs: "https://docs.example.com/events/checkout-events",
@@ -345,9 +347,9 @@ export const services: Service[] = [
     currentVersion: "v3.2.0",
     monthlyCost: "$8,680",
     description: "Serves product metadata, pricing references, category search, and merchandising context.",
-    repository: "github.com/acme/catalog-api",
+    repository: `github.com/${mockGitHubOwner}/catalog-api`,
     documentation: {
-      repository: "https://github.com/acme/catalog-api",
+      repository: `https://github.com/${mockGitHubOwner}/catalog-api`,
       runbook: "https://docs.example.com/runbooks/catalog-api",
       apiDocs: "https://docs.example.com/apis/catalog-api",
       eventDocs: "https://docs.example.com/events/catalog-events",
@@ -378,9 +380,9 @@ export const services: Service[] = [
     currentVersion: "v0.1.0",
     monthlyCost: "$3,220",
     description: "Developer portal for catalog, deployments, golden paths, governance, and operational visibility.",
-    repository: "github.com/acme/idp-portal",
+    repository: `github.com/${mockGitHubOwner}/idp-portal`,
     documentation: {
-      repository: "https://github.com/acme/idp-portal",
+      repository: `https://github.com/${mockGitHubOwner}/idp-portal`,
       runbook: "https://docs.example.com/runbooks/idp-portal",
       apiDocs: "https://docs.example.com/apis/idp-portal",
       eventDocs: "https://docs.example.com/events/idp-activity",
@@ -410,9 +412,9 @@ export const services: Service[] = [
     currentVersion: "v0.9.6",
     monthlyCost: "$4,310",
     description: "Processes order lifecycle events and publishes downstream fulfillment signals.",
-    repository: "github.com/acme/orders-worker",
+    repository: `github.com/${mockGitHubOwner}/orders-worker`,
     documentation: {
-      repository: "https://github.com/acme/orders-worker",
+      repository: `https://github.com/${mockGitHubOwner}/orders-worker`,
       runbook: "https://docs.example.com/runbooks/orders-worker",
       apiDocs: "https://docs.example.com/apis/orders-worker",
       eventDocs: "https://docs.example.com/events/order-lifecycle",
@@ -809,7 +811,7 @@ export const deployNewVersionDefaults = {
 export const environmentPromotions: EnvironmentPromotion[] = [
   {
     serviceId: "payments-api",
-    repositoryOwner: "acme",
+    repositoryOwner: mockGitHubOwner,
     repositoryName: "payments-api",
     environments: [
       { environment: "dev", version: "v1.18.5", sha: "c4f18d2", status: "Deployed", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Lead approval by PR", approvedBy: "CI automation", promotedAt: "2026-06-11 08:20", deployed: true },
@@ -817,8 +819,8 @@ export const environmentPromotions: EnvironmentPromotion[] = [
       { environment: "prod", version: "v1.18.4", sha: "9ad31c2", status: "Live", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Maya Chen", promotedAt: "2026-06-11 09:18", deployed: true }
     ],
     history: [
-      { from: "stage", to: "prod", version: "v1.18.4", sha: "9ad31c2", status: "completed", approvedBy: "Maya Chen", promotedAt: "2026-06-11 09:18", prUrl: "https://github.com/acme/payments-api/pull/142", approvalStatus: "approved", mergeStatus: "merged", deployed: true },
-      { from: "dev", to: "stage", version: "v1.18.4", sha: "9ad31c2", status: "completed", approvedBy: "Maya Chen", promotedAt: "2026-06-11 08:54", prUrl: "https://github.com/acme/payments-api/pull/141", approvalStatus: "approved", mergeStatus: "merged", deployed: true }
+      { from: "stage", to: "prod", version: "v1.18.4", sha: "9ad31c2", status: "completed", approvedBy: "Maya Chen", promotedAt: "2026-06-11 09:18", prUrl: `https://github.com/${mockGitHubOwner}/payments-api/pull/142`, approvalStatus: "approved", mergeStatus: "merged", deployed: true },
+      { from: "dev", to: "stage", version: "v1.18.4", sha: "9ad31c2", status: "completed", approvedBy: "Maya Chen", promotedAt: "2026-06-11 08:54", prUrl: `https://github.com/${mockGitHubOwner}/payments-api/pull/141`, approvalStatus: "approved", mergeStatus: "merged", deployed: true }
     ],
     timeline: [
       { event: "Built", environment: "dev", time: "2026-06-11 08:03", status: "succeeded", tone: "success" },
@@ -837,7 +839,7 @@ export const environmentPromotions: EnvironmentPromotion[] = [
   },
   {
     serviceId: "checkout-service",
-    repositoryOwner: "acme",
+    repositoryOwner: mockGitHubOwner,
     repositoryName: "checkout-service",
     environments: [
       { environment: "dev", version: "v2.7.4", sha: "fd80a12", status: "Deployed", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Lead approval by PR", approvedBy: "CI automation", promotedAt: "2026-06-11 06:12", deployed: true },
@@ -845,8 +847,8 @@ export const environmentPromotions: EnvironmentPromotion[] = [
       { environment: "prod", version: "v2.7.1", sha: "b721cd0", status: "Stable", tone: "success", promotionEligibility: "Rollback target", requiredApproval: "Completed", approvedBy: "Andre Patel", promotedAt: "2026-06-07 10:19", deployed: true }
     ],
     history: [
-      { from: "dev", to: "stage", version: "v2.7.3", sha: "fd80a11", status: "needs approval", approvedBy: "Pending", promotedAt: "Pending", prUrl: "https://github.com/acme/checkout-service/pull/88", approvalStatus: "pending", mergeStatus: "open", deployed: false },
-      { from: "stage", to: "prod", version: "v2.7.1", sha: "b721cd0", status: "completed", approvedBy: "Andre Patel", promotedAt: "2026-06-07 10:19", prUrl: "https://github.com/acme/checkout-service/pull/84", approvalStatus: "approved", mergeStatus: "merged", deployed: true }
+      { from: "dev", to: "stage", version: "v2.7.3", sha: "fd80a11", status: "needs approval", approvedBy: "Pending", promotedAt: "Pending", prUrl: `https://github.com/${mockGitHubOwner}/checkout-service/pull/88`, approvalStatus: "pending", mergeStatus: "open", deployed: false },
+      { from: "stage", to: "prod", version: "v2.7.1", sha: "b721cd0", status: "completed", approvedBy: "Andre Patel", promotedAt: "2026-06-07 10:19", prUrl: `https://github.com/${mockGitHubOwner}/checkout-service/pull/84`, approvalStatus: "approved", mergeStatus: "merged", deployed: true }
     ],
     timeline: [
       { event: "Built", environment: "dev", time: "2026-06-11 06:01", status: "succeeded", tone: "success" },
@@ -862,7 +864,7 @@ export const environmentPromotions: EnvironmentPromotion[] = [
   },
   {
     serviceId: "catalog-api",
-    repositoryOwner: "acme",
+    repositoryOwner: mockGitHubOwner,
     repositoryName: "catalog-api",
     environments: [
       { environment: "dev", version: "v3.2.1", sha: "de92a44", status: "Deployed", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Lead approval by PR", approvedBy: "CI automation", promotedAt: "2026-06-10 15:40", deployed: true },
@@ -870,7 +872,7 @@ export const environmentPromotions: EnvironmentPromotion[] = [
       { environment: "prod", version: "v3.1.8", sha: "aa90cd1", status: "Stable", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Sam Rivera", promotedAt: "2026-06-08 11:22", deployed: true }
     ],
     history: [
-      { from: "dev", to: "stage", version: "v3.2.0", sha: "ab12f90", status: "completed", approvedBy: "Sam Rivera", promotedAt: "2026-06-10 16:42", prUrl: "https://github.com/acme/catalog-api/pull/57", approvalStatus: "approved", mergeStatus: "merged", deployed: true }
+      { from: "dev", to: "stage", version: "v3.2.0", sha: "ab12f90", status: "completed", approvedBy: "Sam Rivera", promotedAt: "2026-06-10 16:42", prUrl: `https://github.com/${mockGitHubOwner}/catalog-api/pull/57`, approvalStatus: "approved", mergeStatus: "merged", deployed: true }
     ],
     timeline: [
       { event: "Built", environment: "dev", time: "2026-06-10 15:22", status: "succeeded", tone: "success" },
@@ -886,7 +888,7 @@ export const environmentPromotions: EnvironmentPromotion[] = [
   },
   {
     serviceId: "idp-portal",
-    repositoryOwner: "acme",
+    repositoryOwner: mockGitHubOwner,
     repositoryName: "idp-portal",
     environments: [
       { environment: "dev", version: "v0.1.0", sha: "1dbe991", status: "Building", tone: "info", promotionEligibility: "Waiting for build", requiredApproval: "Lead approval by PR", approvedBy: "Pending", promotedAt: "Pending", deployed: false },
@@ -894,7 +896,7 @@ export const environmentPromotions: EnvironmentPromotion[] = [
       { environment: "prod", version: "v0.0.8", sha: "a18c030", status: "Stable", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Avery Morgan", promotedAt: "2026-06-09 09:00", deployed: true }
     ],
     history: [
-      { from: "dev", to: "stage", version: "v0.0.9", sha: "bd0a918", status: "completed", approvedBy: "Avery Morgan", promotedAt: "2026-06-10 09:00", prUrl: "https://github.com/acme/idp-portal/pull/19", approvalStatus: "approved", mergeStatus: "merged", deployed: true }
+      { from: "dev", to: "stage", version: "v0.0.9", sha: "bd0a918", status: "completed", approvedBy: "Avery Morgan", promotedAt: "2026-06-10 09:00", prUrl: `https://github.com/${mockGitHubOwner}/idp-portal/pull/19`, approvalStatus: "approved", mergeStatus: "merged", deployed: true }
     ],
     timeline: [
       { event: "Built", environment: "dev", time: "2026-06-11 10:22", status: "running", tone: "info" },
@@ -907,7 +909,7 @@ export const environmentPromotions: EnvironmentPromotion[] = [
   },
   {
     serviceId: "orders-worker",
-    repositoryOwner: "acme",
+    repositoryOwner: mockGitHubOwner,
     repositoryName: "orders-worker",
     environments: [
       { environment: "dev", version: "v0.9.7", sha: "90be441", status: "Deployed", tone: "success", promotionEligibility: "Eligible for stage", requiredApproval: "Lead approval by PR", approvedBy: "CI automation", promotedAt: "2026-06-10 12:15", deployed: true },
@@ -915,7 +917,7 @@ export const environmentPromotions: EnvironmentPromotion[] = [
       { environment: "prod", version: "v0.9.4", sha: "1f800de", status: "Stable", tone: "success", promotionEligibility: "Current production", requiredApproval: "Completed", approvedBy: "Nora Ali", promotedAt: "2026-06-04 13:08", deployed: true }
     ],
     history: [
-      { from: "dev", to: "stage", version: "v0.9.6", sha: "0bc44ea", status: "rejected", approvedBy: "Policy engine", promotedAt: "2026-06-10 14:03", prUrl: "https://github.com/acme/orders-worker/pull/33", approvalStatus: "rejected", mergeStatus: "rejected", deployed: false, rejectedReason: "Required labels policy failed." }
+      { from: "dev", to: "stage", version: "v0.9.6", sha: "0bc44ea", status: "rejected", approvedBy: "Policy engine", promotedAt: "2026-06-10 14:03", prUrl: `https://github.com/${mockGitHubOwner}/orders-worker/pull/33`, approvalStatus: "rejected", mergeStatus: "rejected", deployed: false, rejectedReason: "Required labels policy failed." }
     ],
     timeline: [
       { event: "Built", environment: "dev", time: "2026-06-10 12:03", status: "succeeded", tone: "success" },

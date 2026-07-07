@@ -76,6 +76,8 @@ export const authProviders = [
   { id: "microsoft" as const, label: "Continue with Microsoft" }
 ];
 
+const mockGitHubOwner = process.env.NEXT_PUBLIC_GITHUB_ORG || process.env.NEXT_PUBLIC_GITHUB_OWNER || process.env.GITHUB_ORG || process.env.GITHUB_OWNER || "github-owner-not-configured";
+
 export const mockUsers: AuthenticatedUser[] = [
   user("user-avery", "Avery Morgan", "avery.morgan@example.com", "Platform Admin", "platform-engineering", ["dev", "stage", "prod"], "Active", "4 min ago"),
   user("user-jordan", "Jordan Lee", "jordan.lee@example.com", "Platform Engineer", "platform-engineering", ["dev", "stage", "prod"], "Active", "18 min ago"),
@@ -92,7 +94,7 @@ export const teamProfiles: TeamProfile[] = teams.map((team) => {
     name: team.name,
     owner: members.find((member) => member.role === "Team Lead" || member.role === "Platform Admin")?.name ?? `${team.name} Lead`,
     slackChannel: `#${team.id}`,
-    githubOrganization: team.id === "platform-engineering" ? "acme-platform" : "acme",
+    githubOrganization: mockGitHubOwner,
     costCenter: `CC-${team.id.slice(0, 4).toUpperCase()}-${team.members}`,
     environmentAccess: team.name === "Developer Experience" ? ["dev", "stage"] : ["dev", "stage", "prod"],
     members: members.map((member) => ({ ...member, slack: `@${member.name.toLowerCase().replaceAll(" ", ".")}` })),

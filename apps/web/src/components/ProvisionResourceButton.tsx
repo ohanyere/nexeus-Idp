@@ -18,6 +18,7 @@ type ProvisionResourceButtonProps = {
   repositoryOwner?: string;
   repositoryName?: string;
   repositoryUrl?: string;
+  configuredRepositoryOwner?: string;
   label?: string;
 };
 
@@ -49,6 +50,7 @@ export function ProvisionResourceButton({
   repositoryOwner,
   repositoryName,
   repositoryUrl,
+  configuredRepositoryOwner,
   label = "Provision"
 }: ProvisionResourceButtonProps) {
   const { can, user } = useMockSession();
@@ -76,8 +78,8 @@ export function ProvisionResourceButton({
       };
     }
 
-    return parseRepository(selectedService?.repository || selectedService?.documentation.repository);
-  }, [repositoryName, repositoryOwner, repositoryUrl, selectedService]);
+    return parseRepository(selectedService?.repository || selectedService?.documentation.repository, configuredRepositoryOwner);
+  }, [configuredRepositoryOwner, repositoryName, repositoryOwner, repositoryUrl, selectedService]);
   const configuration = useMemo(() => defaultConfiguration(selectedResource.gitOpsResourceId), [selectedResource.gitOpsResourceId]);
   const effectiveServiceName = serviceName || selectedService?.name;
   const effectiveServiceId = serviceId || selectedService?.id;
@@ -269,7 +271,11 @@ function defaultConfiguration(resourceId?: GitOpsResourceId) {
   }
 }
 
-function parseRepository(value?: string) {
+function isPlaceholderOwner(value: string) {
+  return ["acme", "acme-platform", "demo-org", "github-owner-not-configured"].includes(value.trim().toLowerCase());
+}
+
+function parseRepository(value?: string, configuredOwner?: string) {
   if (!value) {
     return null;
   }
@@ -281,10 +287,12 @@ function parseRepository(value?: string) {
     return null;
   }
 
+  const effectiveOwner = configuredOwner && isPlaceholderOwner(owner) ? configuredOwner : owner;
+
   return {
-    owner,
+    owner: effectiveOwner,
     name,
-    url: `https://github.com/${owner}/${name}`
+    url: `https://github.com/${effectiveOwner}/${name}`
   };
 }
 
