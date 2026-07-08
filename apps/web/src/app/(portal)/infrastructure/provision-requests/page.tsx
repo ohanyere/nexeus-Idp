@@ -10,10 +10,11 @@ export const dynamic = "force-dynamic";
 
 export default async function ProvisionRequestsPage() {
   const { requests, warning } = await loadRequests();
+  const configuredRepositoryOwner = process.env.GITHUB_ORG?.trim() || process.env.GITHUB_OWNER?.trim();
 
   return (
     <>
-      <PageHeader title="Provision Requests" description="GitOps workflow from developer request to claim PR, approval, ArgoCD sync, Crossplane reconciliation, and readiness." action={<ProvisionResourceButton label="New Request" />} />
+      <PageHeader title="Provision Requests" description="GitOps workflow from developer request to claim PR, approval, ArgoCD sync, Crossplane reconciliation, and readiness." action={<ProvisionResourceButton configuredRepositoryOwner={configuredRepositoryOwner} label="New Request" />} />
       <ProvisionRequestsView requests={requests} warning={warning} />
     </>
   );
@@ -74,6 +75,7 @@ async function toView(request: Awaited<ReturnType<typeof listInfrastructureProvi
     repositoryName: request.repositoryName,
     serviceName: request.serviceName,
     errorMessage: request.errorMessage,
+    runtimeWarnings: overlay.warnings,
     createdAt: request.createdAt.toISOString(),
     events: request.events.map((event) => ({
       event: event.event,

@@ -1,6 +1,11 @@
 const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
+const githubOwner = process.env.GITHUB_ORG?.trim() || process.env.GITHUB_OWNER?.trim() || "ohanyere";
+
+function githubUrl(repo) {
+ return `https://github.com/${githubOwner}/${repo}`;
+}
 
 async function main() {
  const platform = await prisma.team.upsert({
@@ -37,12 +42,16 @@ async function main() {
 
  const paymentsApi = await prisma.service.upsert({
  where: { name: "payments-api" },
- update: {},
+ update: {
+ repositoryUrl: githubUrl("payments-api"),
+ repositoryOwner: githubOwner,
+ repositoryName: "payments-api"
+ },
  create: {
  name: "payments-api",
  description: "Handles payment authorization, capture, refund orchestration, and provider webhooks.",
- repositoryUrl: "https://github.com/acme/payments-api",
- repositoryOwner: "acme",
+ repositoryUrl: githubUrl("payments-api"),
+ repositoryOwner: githubOwner,
  repositoryName: "payments-api",
  defaultBranch: "main",
  dockerHubNamespace: "kuberpull",
@@ -81,12 +90,16 @@ async function main() {
 
  const portal = await prisma.service.upsert({
  where: { name: "idp-portal" },
- update: {},
+ update: {
+ repositoryUrl: githubUrl("idp-portal"),
+ repositoryOwner: githubOwner,
+ repositoryName: "idp-portal"
+ },
  create: {
  name: "idp-portal",
  description: "Developer portal for catalog, deployments, golden paths, governance, and operational visibility.",
- repositoryUrl: "https://github.com/acme/idp-portal",
- repositoryOwner: "acme",
+ repositoryUrl: githubUrl("idp-portal"),
+ repositoryOwner: githubOwner,
  repositoryName: "idp-portal",
  defaultBranch: "main",
  dockerHubNamespace: "kuberpull",

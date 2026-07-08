@@ -14,6 +14,7 @@ export function generateStaticParams() {
 export default async function ResourceCatalogDetailPage({ params }: ResourceCatalogDetailPageProps) {
   const { resourceId } = await params;
   const resource = getResourceCatalogItem(resourceId);
+  const configuredRepositoryOwner = process.env.GITHUB_ORG?.trim() || process.env.GITHUB_OWNER?.trim();
 
   if (!resource) {
     notFound();
@@ -21,7 +22,7 @@ export default async function ResourceCatalogDetailPage({ params }: ResourceCata
 
   return (
     <>
-      <PageHeader title={resource.name} description={resource.description} eyebrow="Resource details" action={resource.gitOpsResourceId ? <ProvisionResourceButton resourceId={resource.id} label="Provision through GitOps" /> : null} />
+      <PageHeader title={resource.name} description={resource.description} eyebrow="Resource details" action={resource.gitOpsResourceId ? <ProvisionResourceButton resourceId={resource.id} configuredRepositoryOwner={configuredRepositoryOwner} label="Provision through GitOps" /> : null} />
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid gap-5">
           <Panel title="Overview">

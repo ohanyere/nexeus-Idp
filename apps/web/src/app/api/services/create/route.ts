@@ -144,7 +144,7 @@ function validateRequest(body: CreateServiceRequest) {
 }
 
 function buildMockRepository(name: string) {
- const owner = process.env.GITHUB_ORG?.trim() || "demo-org";
+ const owner = process.env.GITHUB_ORG?.trim() || process.env.GITHUB_OWNER?.trim() || "github-owner-not-configured";
 
  return {
  url: `https://github.com/${owner}/${name}`,

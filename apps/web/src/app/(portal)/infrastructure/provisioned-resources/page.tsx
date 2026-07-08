@@ -73,6 +73,7 @@ async function toView(request: Awaited<ReturnType<typeof listInfrastructureProvi
     repositoryName: request.repositoryName,
     serviceName: request.serviceName,
     errorMessage: request.errorMessage,
+    runtimeWarnings: overlay.warnings,
     createdAt: request.createdAt.toISOString(),
     events: request.events.map((event) => ({
       event: event.event,

@@ -46,6 +46,7 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  }
 
  const service = getServiceById(serviceId);
+ const configuredRepositoryOwner = process.env.GITHUB_ORG?.trim() || process.env.GITHUB_OWNER?.trim();
 
  if (!service) {
  notFound();
@@ -129,7 +130,7 @@ export default async function ServiceDetailPage({ params }: ServiceDetailPagePro
  eyebrow="Service intelligence"
  title={service.name}
  description={service.description}
- action={<ProvisionResourceButton serviceId={service.id} serviceName={service.name} label="Provision Resource" />}
+ action={<ProvisionResourceButton serviceId={service.id} serviceName={service.name} configuredRepositoryOwner={configuredRepositoryOwner} label="Provision Resource" />}
  />
 
  <ServiceDetailTabs serviceId={service.id} />

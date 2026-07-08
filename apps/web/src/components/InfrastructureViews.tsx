@@ -38,6 +38,7 @@ export type GitOpsProvisionRequestView = {
   repositoryName: string;
   serviceName?: string | null;
   errorMessage?: string | null;
+  runtimeWarnings: string[];
   createdAt: string;
   events: Array<{
     event: string;
@@ -48,7 +49,7 @@ export type GitOpsProvisionRequestView = {
   }>;
 };
 
-export function ResourceCatalogView() {
+export function ResourceCatalogView({ configuredRepositoryOwner }: { configuredRepositoryOwner?: string }) {
   const [query, setQuery] = useState("");
   const [environment, setEnvironment] = useState(all);
   const [type, setType] = useState(all);
@@ -86,7 +87,7 @@ export function ResourceCatalogView() {
             </dl>
             <div className="mt-4 flex items-center justify-between gap-2">
               <Link href={`/infrastructure/resource-catalog/${resource.id}`} className="text-xs font-semibold text-slate-800 underline decoration-slate-300 underline-offset-2">Details</Link>
-              {resource.gitOpsResourceId ? <ProvisionResourceButton resourceId={resource.id} label="Provision through GitOps" /> : <span className="text-xs font-medium text-muted">No GitOps claim</span>}
+              {resource.gitOpsResourceId ? <ProvisionResourceButton resourceId={resource.id} configuredRepositoryOwner={configuredRepositoryOwner} label="Provision through GitOps" /> : <span className="text-xs font-medium text-muted">No GitOps claim</span>}
             </div>
           </article>
         ))}
@@ -153,6 +154,11 @@ export function ProvisionRequestsView({ requests, warning }: { requests: GitOpsP
             <div className="mt-3 grid gap-2">
               {request.events.map((event) => <div key={`${request.id}-${event.event}-${event.createdAt}`} className="grid gap-1 rounded-md bg-canvas px-3 py-2 text-xs"><div className="flex items-center justify-between gap-3"><span>{event.event} · {event.actor}</span><StatusBadge label={event.status} tone={statusTone(event.status)} /></div><p className="text-muted">{event.message}</p></div>)}
             </div>
+            {request.runtimeWarnings.length ? (
+              <div className="mt-3 grid gap-2">
+                {request.runtimeWarnings.map((warning) => <p key={warning} className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">{warning}</p>)}
+              </div>
+            ) : null}
             {request.errorMessage ? <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900">{request.errorMessage}</p> : null}
           </article>
         ))}
@@ -202,7 +208,7 @@ export function ProvisionedResourcesView({ requests, warning }: { requests: GitO
   );
 }
 
-export function ResourceTemplatesView() {
+export function ResourceTemplatesView({ configuredRepositoryOwner }: { configuredRepositoryOwner?: string }) {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {resourceTemplates.map((template) => (
@@ -215,7 +221,7 @@ export function ResourceTemplatesView() {
             <Meta label="Environments" value={template.supportedEnvironments.join(", ")} />
             <Meta label="Parameters" value={template.parameters.join(", ")} />
           </dl>
-          <div className="mt-4"><ProvisionResourceButton label="Provision from template" /></div>
+          <div className="mt-4"><ProvisionResourceButton configuredRepositoryOwner={configuredRepositoryOwner} label="Provision from template" /></div>
         </article>
       ))}
     </div>

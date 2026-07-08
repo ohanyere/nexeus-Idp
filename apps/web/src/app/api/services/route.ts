@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { listPersistedServices, toCatalogApiService } from "@/lib/server/catalog";
 import { DatabaseConfigurationError } from "@/lib/server/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
  try {
  const services = await listPersistedServices();
@@ -10,6 +12,10 @@ export async function GET() {
  return NextResponse.json({
  source: "database",
  services: services.map(toCatalogApiService)
+ }, {
+ headers: {
+ "Cache-Control": "no-store"
+ }
  });
  } catch (error) {
  if (error instanceof DatabaseConfigurationError) {

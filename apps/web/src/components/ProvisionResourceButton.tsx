@@ -4,10 +4,10 @@ import { useMockSession } from "@/components/MockSessionContext";
 import { StatusBadge } from "@/components/StatusBadge";
 import { gitOpsSupportedResourceIds, resourceCatalog } from "@/lib/infrastructure";
 import type { GitOpsResourceId } from "@/lib/infrastructure";
-import type { EnvironmentName } from "@/lib/mock-data";
-import { services, teams } from "@/lib/mock-data";
+import type { EnvironmentName, Service } from "@/lib/mock-data";
+import { services as mockServices, teams as mockTeams } from "@/lib/mock-data";
 import { Check, ExternalLink, GitPullRequest, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type ProvisionResourceButtonProps = {
   resourceId?: string;
@@ -39,6 +39,39 @@ type ProvisionResult = {
   manifest: string;
 };
 
+type CatalogApiService = {
+  name: string;
+  repositoryUrl: string;
+  repositoryOwner: string;
+  repositoryName: string;
+  ownerEmail: string;
+  team: {
+    name: string;
+    slug: string;
+  };
+  environments: Array<{
+    name: string;
+  }>;
+};
+
+type ProvisionServiceOption = {
+  id: string;
+  name: string;
+  teamName: string;
+  teamSlug: string;
+  ownerEmail: string;
+  repositoryOwner: string;
+  repositoryName: string;
+  repositoryUrl: string;
+  environments: EnvironmentName[];
+  source: "database" | "mock";
+};
+
+type TeamOption = {
+  id: string;
+  name: string;
+};
+
 const steps = ["Team", "Environment", "Claim", "Review", "GitOps"];
 
 export function ProvisionResourceButton({
@@ -66,9 +99,19 @@ export function ProvisionResourceButton({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ProvisionResult | null>(null);
+  const [serviceOptions, setServiceOptions] = useState<ProvisionServiceOption[]>([]);
+  const [serviceSource, setServiceSource] = useState<"idle" | "loading" | "database" | "mock" | "unavailable">("idle");
+  const [serviceLoadError, setServiceLoadError] = useState<string | null>(null);
   const selectedResource = gitOpsResources.find((resource) => resource.id === selectedResourceId) ?? initialResource;
-  const selectedTeam = teams.find((team) => team.id === teamId) ?? teams[0];
-  const selectedService = services.find((service) => service.id === selectedServiceId);
+  const selectedService = serviceOptions.find((service) => service.id === selectedServiceId);
+  const teamOptions = useMemo<TeamOption[]>(() => {
+    if (serviceOptions.length > 0) {
+      return uniqueBy(serviceOptions.map((service) => ({ id: service.teamSlug, name: service.teamName })), (team) => team.id);
+    }
+
+    return mockTeams.map((team) => ({ id: team.id, name: team.name }));
+  }, [serviceOptions]);
+  const selectedTeam = teamOptions.find((team) => team.id === teamId) ?? teamOptions[0] ?? { id: user.teamId, name: user.team };
   const selectedRepository = useMemo(() => {
     if (repositoryOwner && repositoryName) {
       return {
@@ -78,17 +121,97 @@ export function ProvisionResourceButton({
       };
     }
 
-    return parseRepository(selectedService?.repository || selectedService?.documentation.repository, configuredRepositoryOwner);
-  }, [configuredRepositoryOwner, repositoryName, repositoryOwner, repositoryUrl, selectedService]);
+    if (!selectedService) {
+      return null;
+    }
+
+    return {
+      owner: selectedService.repositoryOwner,
+      name: selectedService.repositoryName,
+      url: selectedService.repositoryUrl
+    };
+  }, [repositoryName, repositoryOwner, repositoryUrl, selectedService]);
   const configuration = useMemo(() => defaultConfiguration(selectedResource.gitOpsResourceId), [selectedResource.gitOpsResourceId]);
   const effectiveServiceName = serviceName || selectedService?.name;
-  const effectiveServiceId = serviceId || selectedService?.id;
-  const effectiveTeamName = teamName || selectedService?.team || selectedTeam.name;
-  const effectiveTeamSlug = teamSlug || selectedService?.teamId || selectedTeam.id;
+  const effectiveServiceId = serviceId || selectedService?.name;
+  const effectiveTeamName = teamName || selectedService?.teamName || selectedTeam.name;
+  const effectiveTeamSlug = teamSlug || selectedService?.teamSlug || selectedTeam.id;
   const canSubmit = Boolean(selectedResource.gitOpsResourceId && selectedRepository?.owner && selectedRepository.name && name.trim());
+
+  useEffect(() => {
+    if (!open || repositoryOwner) {
+      return;
+    }
+
+    let active = true;
+
+    async function loadServices() {
+      setServiceSource("loading");
+      setServiceLoadError(null);
+
+      try {
+        const response = await fetch("/api/services", { cache: "no-store" });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(typeof payload.error === "string" ? payload.error : "Service catalog is unavailable.");
+        }
+
+        const payload = await response.json() as { services?: unknown[] };
+        const persistedServices: ProvisionServiceOption[] = Array.isArray(payload.services)
+          ? payload.services.map(toProvisionServiceOption).filter(isProvisionServiceOption)
+          : [];
+
+        if (!active) {
+          return;
+        }
+
+        if (persistedServices.length > 0) {
+          setServiceOptions(persistedServices);
+          setServiceSource("database");
+
+          if (serviceId && !persistedServices.some((service) => service.id === serviceId)) {
+            const matchingService = persistedServices.find((service) => service.name === serviceId);
+            if (matchingService) {
+              setSelectedServiceId(matchingService.id);
+              setTeamId(matchingService.teamSlug);
+            }
+          }
+
+          return;
+        }
+
+        setServiceOptions(mockServices.map((service) => mockServiceOption(service, configuredRepositoryOwner)).filter((service): service is ProvisionServiceOption => Boolean(service)));
+        setServiceSource("mock");
+      } catch (loadError) {
+        if (!active) {
+          return;
+        }
+
+        setServiceOptions([]);
+        setServiceSource("unavailable");
+        setServiceLoadError(loadError instanceof Error ? loadError.message : "Service catalog is unavailable.");
+      }
+    }
+
+    loadServices();
+
+    return () => {
+      active = false;
+    };
+  }, [configuredRepositoryOwner, open, repositoryOwner, serviceId]);
 
   if (!can("create resource")) {
     return null;
+  }
+
+  function updateSelectedService(nextServiceId: string) {
+    setSelectedServiceId(nextServiceId);
+    const nextService = serviceOptions.find((service) => service.id === nextServiceId);
+
+    if (nextService) {
+      setTeamId(nextService.teamSlug);
+    }
   }
 
   async function submitProvisionRequest() {
@@ -169,14 +292,27 @@ export function ProvisionResourceButton({
                 <div className="grid gap-3 md:grid-cols-2">
                   <WizardField label="Team">
                     <select value={teamId} onChange={(event) => setTeamId(event.target.value)} className="h-10 rounded-md border border-line px-3 text-sm">
-                      {teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
+                      {teamOptions.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
                     </select>
                   </WizardField>
                   <WizardField label="Service repository">
-                    <select value={selectedServiceId} onChange={(event) => setSelectedServiceId(event.target.value)} disabled={Boolean(serviceId || repositoryOwner)} className="h-10 rounded-md border border-line px-3 text-sm disabled:bg-canvas">
-                      <option value="">Select service</option>
-                      {services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
+                    <select value={selectedServiceId} onChange={(event) => updateSelectedService(event.target.value)} disabled={Boolean(serviceId || repositoryOwner) || serviceSource === "loading" || serviceSource === "unavailable"} className="h-10 rounded-md border border-line px-3 text-sm disabled:bg-canvas">
+                      <option value="">{serviceSource === "loading" ? "Loading services..." : "Select service"}</option>
+                      {serviceOptions.map((service) => (
+                        <option key={service.id} value={service.id}>
+                          {service.name} - {service.repositoryOwner}/{service.repositoryName} - {service.teamName} - {service.ownerEmail}
+                        </option>
+                      ))}
                     </select>
+                    {selectedService ? (
+                      <dl className="grid gap-1 rounded-md border border-line bg-canvas px-3 py-2 text-xs text-slate-700">
+                        <Review label="Repository" value={`${selectedService.repositoryOwner}/${selectedService.repositoryName}`} />
+                        <Review label="Team" value={selectedService.teamName} />
+                        <Review label="Owner" value={selectedService.ownerEmail} />
+                      </dl>
+                    ) : null}
+                    {serviceSource === "mock" ? <p className="text-xs text-muted">Demo services shown because the database catalog is empty.</p> : null}
+                    {serviceLoadError ? <p className="text-xs text-rose-700">{serviceLoadError}</p> : null}
                   </WizardField>
                 </div>
               ) : null}
@@ -269,6 +405,82 @@ function defaultConfiguration(resourceId?: GitOpsResourceId) {
     default:
       return { region: "us-east-1", deletionPolicy: "Orphan" };
   }
+}
+
+function uniqueBy<T>(items: T[], key: (item: T) => string) {
+  const seen = new Set<string>();
+
+  return items.filter((item) => {
+    const value = key(item);
+
+    if (seen.has(value)) {
+      return false;
+    }
+
+    seen.add(value);
+    return true;
+  });
+}
+
+function isEnvironmentName(value: string): value is EnvironmentName {
+  return ["dev", "stage", "prod"].includes(value);
+}
+
+function toProvisionServiceOption(service: unknown): ProvisionServiceOption | null {
+  if (!service || typeof service !== "object") {
+    return null;
+  }
+
+  const item = service as Partial<CatalogApiService>;
+  const name = typeof item.name === "string" ? item.name : "";
+  const repositoryOwner = typeof item.repositoryOwner === "string" ? item.repositoryOwner : "";
+  const repositoryName = typeof item.repositoryName === "string" ? item.repositoryName : "";
+  const repositoryUrl = typeof item.repositoryUrl === "string" ? item.repositoryUrl : "";
+  const ownerEmail = typeof item.ownerEmail === "string" ? item.ownerEmail : "";
+  const teamName = typeof item.team?.name === "string" ? item.team.name : "";
+  const teamSlug = typeof item.team?.slug === "string" ? item.team.slug : "";
+
+  if (!name || !repositoryOwner || !repositoryName || !repositoryUrl || !teamName || !teamSlug) {
+    return null;
+  }
+
+  return {
+    id: name,
+    name,
+    teamName,
+    teamSlug,
+    ownerEmail: ownerEmail || "unassigned",
+    repositoryOwner,
+    repositoryName,
+    repositoryUrl,
+    environments: (item.environments ?? []).map((environment) => environment.name).filter(isEnvironmentName),
+    source: "database"
+  };
+}
+
+function isProvisionServiceOption(service: ProvisionServiceOption | null): service is ProvisionServiceOption {
+  return Boolean(service);
+}
+
+function mockServiceOption(service: Service, configuredOwner?: string): ProvisionServiceOption | null {
+  const repository = parseRepository(service.repository || service.documentation.repository, configuredOwner);
+
+  if (!repository) {
+    return null;
+  }
+
+  return {
+    id: service.id,
+    name: service.name,
+    teamName: service.team,
+    teamSlug: service.teamId,
+    ownerEmail: service.ownerEmail,
+    repositoryOwner: repository.owner,
+    repositoryName: repository.name,
+    repositoryUrl: repository.url,
+    environments: service.environments,
+    source: "mock"
+  };
 }
 
 function isPlaceholderOwner(value: string) {

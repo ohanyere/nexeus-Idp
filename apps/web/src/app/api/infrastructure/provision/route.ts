@@ -10,6 +10,8 @@ import {
 } from "@/lib/server/infrastructure-provisioning";
 import { getPersistedService } from "@/lib/server/catalog";
 
+type PersistedProvisionService = NonNullable<Awaited<ReturnType<typeof getPersistedService>>>;
+
 type ProvisionApiRequest = {
   resourceId?: unknown;
   resourceName?: unknown;
@@ -82,32 +84,19 @@ function parseRepositoryUrl(value: string) {
   return { owner, name };
 }
 
-async function resolveRepository(body: ProvisionApiRequest) {
+function resolveRepository(body: ProvisionApiRequest, persistedService: PersistedProvisionService | null) {
   const requestedOwner = stringValue(body.repositoryOwner);
   const requestedName = stringValue(body.repositoryName);
   const requestedUrl = stringValue(body.repositoryUrl);
-  const serviceId = stringValue(body.serviceId);
   const configuredOwner = configuredGitHubOwner();
   const urlRepository = parseRepositoryUrl(requestedUrl);
 
-  if (serviceId) {
-    try {
-      const service = await getPersistedService(serviceId);
-
-      if (service?.repositoryOwner && service.repositoryName) {
-        const shouldUsePersistedRepository = !requestedOwner || isPlaceholderOwner(requestedOwner) || !requestedName;
-
-        if (shouldUsePersistedRepository) {
-          return {
-            owner: service.repositoryOwner,
-            name: service.repositoryName,
-            url: service.repositoryUrl || repositoryUrl(service.repositoryOwner, service.repositoryName)
-          };
-        }
-      }
-    } catch {
-      // Database-backed catalog lookup is best-effort; configured owner normalization below still prevents demo owners.
-    }
+  if (persistedService?.repositoryOwner && persistedService.repositoryName) {
+    return {
+      owner: persistedService.repositoryOwner,
+      name: persistedService.repositoryName,
+      url: persistedService.repositoryUrl || repositoryUrl(persistedService.repositoryOwner, persistedService.repositoryName)
+    };
   }
 
   const ownerCandidate = requestedOwner || urlRepository?.owner || "";
@@ -124,12 +113,25 @@ async function resolveRepository(body: ProvisionApiRequest) {
 async function validateBody(body: ProvisionApiRequest) {
   const resourceId = stringValue(body.resourceId);
   const resourceName = stringValue(body.resourceName);
-  const teamName = stringValue(body.teamName);
-  const teamSlug = stringValue(body.teamSlug) || teamName;
+  const requestedServiceId = stringValue(body.serviceId);
+  let persistedService: PersistedProvisionService | null = null;
+
+  if (requestedServiceId) {
+    try {
+      persistedService = await getPersistedService(requestedServiceId);
+    } catch {
+      persistedService = null;
+    }
+  }
+
+  const teamName = persistedService?.team.name ?? stringValue(body.teamName);
+  const teamSlug = persistedService?.team.slug ?? (stringValue(body.teamSlug) || teamName);
   const environment = stringValue(body.environment);
-  const repository = await resolveRepository(body);
+  const repository = resolveRepository(body, persistedService);
   const requester = stringValue(body.requester) || "IDP user";
   const requesterEmail = stringValue(body.requesterEmail) || requester;
+  const serviceId = persistedService?.name ?? (requestedServiceId || undefined);
+  const serviceName = persistedService?.name ?? (stringValue(body.serviceName) || undefined);
   const errors: string[] = [];
 
   if (!isGitOpsResourceId(resourceId)) {
@@ -160,8 +162,8 @@ async function validateBody(body: ProvisionApiRequest) {
       teamSlug,
       environment: environment as GitOpsProvisionEnvironment,
       costCenter: stringValue(body.costCenter),
-      serviceId: stringValue(body.serviceId) || undefined,
-      serviceName: stringValue(body.serviceName) || undefined,
+      serviceId,
+      serviceName,
       repositoryOwner: repository.owner,
       repositoryName: repository.name,
       repositoryUrl: repository.url || undefined,
