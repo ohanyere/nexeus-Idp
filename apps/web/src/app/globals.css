@@ -71,4 +71,120 @@ table {
  border: 1px solid #d8dee4;
  background: #f6f8fa;
  }
+
+ .nexus-topology {
+ isolation: isolate;
+ }
+
+ .nexus-topology-flow {
+ stroke-dasharray: 38 330;
+ stroke-dashoffset: 0;
+ animation: nexus-flow 5.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+ animation-delay: var(--flow-delay);
+ opacity: 0;
+ }
+
+ .nexus-topology-pulse {
+ animation: nexus-pulse-trace 5.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+ animation-delay: var(--flow-delay);
+ opacity: 0;
+ }
+
+ .nexus-topology-node {
+ animation: nexus-node-active 5.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+ animation-delay: var(--node-delay);
+ box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+ }
+
+ .nexus-topology-node-icon {
+ animation: nexus-icon-active 5.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+ animation-delay: var(--node-delay);
+ }
+}
+
+@keyframes nexus-flow {
+ 0% {
+ opacity: 0;
+ stroke-dashoffset: 240;
+ }
+ 12% {
+ opacity: 0.88;
+ }
+ 54% {
+ opacity: 0.88;
+ }
+ 76% {
+ opacity: 0;
+ stroke-dashoffset: -180;
+ }
+ 100% {
+ opacity: 0;
+ stroke-dashoffset: -180;
+ }
+}
+
+@keyframes nexus-pulse-trace {
+ 0%,
+ 6% {
+ opacity: 0;
+ }
+ 16%,
+ 58% {
+ opacity: 0.8;
+ }
+ 76%,
+ 100% {
+ opacity: 0;
+ }
+}
+
+@keyframes nexus-node-active {
+ 0%,
+ 14%,
+ 100% {
+ border-color: #e2e8f0;
+ background: #ffffff;
+ box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+ }
+ 22%,
+ 38% {
+ border-color: #0f172a;
+ background: #f8fafc;
+ box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+ }
+ 56% {
+ border-color: #cbd5e1;
+ background: #ffffff;
+ }
+}
+
+@keyframes nexus-icon-active {
+ 0%,
+ 14%,
+ 100% {
+ border-color: #e2e8f0;
+ background: #f8fafc;
+ color: #0f172a;
+ }
+ 22%,
+ 38% {
+ border-color: #0f172a;
+ background: #0f172a;
+ color: #ffffff;
+ }
+ 56% {
+ border-color: #cbd5e1;
+ background: #f8fafc;
+ color: #0f172a;
+ }
+}
+
+@media (prefers-reduced-motion: reduce) {
+ .nexus-topology-flow,
+ .nexus-topology-pulse,
+ .nexus-topology-node,
+ .nexus-topology-node-icon {
+ animation: none;
+ opacity: 1;
+ }
 }
