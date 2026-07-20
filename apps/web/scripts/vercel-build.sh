@@ -9,7 +9,7 @@ fi
 npm run prisma:generate
 
 if [ "${VERCEL_ENV:-}" = "production" ]; then
-  npm run prisma:migrate:deploy
+  npm run prisma:deploy
 else
   echo "Skipping Prisma migrations because VERCEL_ENV is '${VERCEL_ENV:-unset}'."
 fi
