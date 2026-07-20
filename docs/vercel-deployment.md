@@ -12,6 +12,8 @@ This guide deploys `apps/web` to Vercel with GitHub OAuth, managed PostgreSQL, G
 The web package runs `prisma generate` from `postinstall`. The Vercel build command
 runs `prisma generate` again, applies committed migrations with
 `prisma migrate deploy` for production deployments, and then runs `next build`.
+For the exact Neon production migration runbook, see
+`docs/neon-production-migrations.md`.
 
 If you deploy from the monorepo root instead, use:
 
@@ -31,7 +33,7 @@ AUTH_GITHUB_ID=
 AUTH_GITHUB_SECRET=
 AUTH_GITHUB_OAUTH_TIMEOUT_MS=10000
 DATABASE_URL=
-DIRECT_URL=
+DATABASE_URL_UNPOOLED=
 GITHUB_TOKEN=
 GITHUB_ORG=
 GITHUB_TEMPLATE_OWNER=
@@ -50,9 +52,9 @@ KUBERNETES_BEARER_TOKEN=
 
 Use a managed PostgreSQL database for `DATABASE_URL`; do not use localhost, Docker, or a workstation-only database for Vercel. Vercel Postgres, Neon, Supabase Postgres, RDS PostgreSQL, and Cloud SQL PostgreSQL are all suitable.
 
-For Neon, set `DATABASE_URL` to the pooled connection string for runtime serverless
-queries. Set `DIRECT_URL` to the direct, non-pooled Neon connection string so
-Prisma migration commands do not run through the pooler.
+For Neon on Vercel, `DATABASE_URL` is the pooled connection string for runtime
+serverless queries. Prisma uses the Vercel-managed `DATABASE_URL_UNPOOLED`
+variable as the direct, non-pooled Neon connection for migration commands.
 
 ## GitHub OAuth
 
@@ -79,13 +81,14 @@ Run migrations against the managed database before a production demo or release:
 
 ```bash
 npm run prisma:generate -w apps/web
-npm run prisma:deploy -w apps/web
+npm run prisma:migrate:deploy -w apps/web
 npm run prisma:seed -w apps/web
 ```
 
-`prisma:deploy` uses `prisma migrate deploy`, which applies committed migrations
-without creating new migration files. Keep `prisma:migrate` for local development
-only, where `prisma migrate dev` is expected.
+`prisma:migrate:deploy` uses `prisma migrate deploy`, which applies committed
+migrations without creating new migration files. Keep `prisma:migrate` for local
+development only, where `prisma migrate dev` is expected. `prisma:deploy` remains
+as a compatibility alias.
 
 Vercel production deployments run the same migration step automatically through
 `npm run vercel-build`. Preview deployments skip migration application by default
@@ -108,7 +111,7 @@ This is expected for a partially configured Vercel environment.
 - `NEXT_PUBLIC_AUTH_MODE` is `github`.
 - GitHub OAuth callback URL matches the deployed URL.
 - `DATABASE_URL` points to managed PostgreSQL.
-- `DIRECT_URL` points to the same database through a direct, non-pooled connection when using Neon or another pooler.
+- `DATABASE_URL_UNPOOLED` points to the same database through Vercel's direct, non-pooled Neon connection.
 - Prisma migrations have been applied to the target database.
 - GitHub automation variables are present if Create Service, release snapshots, promotions, or rollbacks must be live.
 - ArgoCD and Kubernetes variables are present if runtime state must be live.

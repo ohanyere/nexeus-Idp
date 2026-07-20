@@ -17,14 +17,14 @@ read_database_url() {
   done
 }
 
-if [ -z "${DIRECT_URL:-}" ] && [ -n "${DATABASE_URL:-}" ]; then
-  export DIRECT_URL="$DATABASE_URL"
+if [ -z "${DATABASE_URL_UNPOOLED:-}" ] && [ -n "${DATABASE_URL:-}" ]; then
+  export DATABASE_URL_UNPOOLED="$DATABASE_URL"
 fi
 
-if [ -z "${DIRECT_URL:-}" ]; then
+if [ -z "${DATABASE_URL_UNPOOLED:-}" ]; then
   database_url=$(read_database_url)
   if [ -n "$database_url" ]; then
-    export DIRECT_URL="$database_url"
+    export DATABASE_URL_UNPOOLED="$database_url"
   fi
 fi
 
