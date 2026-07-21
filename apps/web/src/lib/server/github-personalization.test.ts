@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
  findRecognizedPlaceholders,
- isSafeTemplateTextFile,
+ isPersonalizableTemplateText,
  personalizeRepositoryContent,
  toServiceSlug
 } from "./github-personalization";
@@ -14,17 +14,26 @@ const input = {
  ownerEmail: "owner@example.com"
 };
 
-test("includes workflow files in the hidden .github directory", () => {
- assert.equal(isSafeTemplateTextFile(".github/workflows/ci.yml"), true);
- assert.equal(isSafeTemplateTextFile(".github/workflows/release.yaml"), true);
- assert.equal(isSafeTemplateTextFile("github/workflows/ci.yml"), false);
+test("personalizes recognized placeholders in every text-file context", () => {
+ for (const content of [
+ "SERVICE_NAME=__SERVICE_NAME__",
+ "# __SERVICE_NAME__",
+ "{\"service\": \"__SERVICE_NAME__\"}",
+ "export const serviceName = \"__SERVICE_NAME__\";",
+ "image: __DOCKER_IMAGE__"
+ ]) {
+ assert.equal(isPersonalizableTemplateText(content), true);
+ }
+
+ assert.equal(isPersonalizableTemplateText("SERVICE_NAME=runtime-value"), false);
+ assert.equal(isPersonalizableTemplateText("__SERVICE_NAME__\0binary"), false);
 });
 
 test("replaces service workflow placeholders with the normalized service slug", () => {
  const workflow = [
  "env:",
  "  IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/__SERVICE_SLUG__:${{ github.sha }}",
- "  LEGACY_IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/**SERVICE_NAME**:${{ github.sha }}",
+ "  NAME: __SERVICE_NAME__",
  "  CANONICAL_IMAGE: __DOCKER_IMAGE__:${{ github.sha }}"
  ].join("\n");
 
@@ -40,9 +49,34 @@ test("normalizes Docker-compatible service image names", () => {
  assert.equal(toServiceSlug("Payments_API.v2"), "payments-api-v2");
 });
 
-test("reports unresolved recognized placeholders by name", () => {
+test("replaces the complete canonical contract across reported template files", () => {
+ const reportedFiles = new Map([
+ [".env.example", "SERVICE_NAME=__SERVICE_NAME__\nENVIRONMENT=__ENVIRONMENT__"],
+ [".github/workflows/ci.yaml", "image: __DOCKER_IMAGE__:${{ github.sha }}\nslug: __SERVICE_SLUG__"],
+ ["README.md", "Owned by __TEAM_NAME__ (__OWNER_EMAIL__)"],
+ ["monitoring/dashboard.json", "{\"service\":\"__SERVICE_NAME__\"}"],
+ ["src/config/env.ts", "export const environment = \"__ENVIRONMENT__\";"],
+ ["src/server.ts", "const costCenter = \"__COST_CENTER__\";"]
+ ]);
+ const completeInput = { ...input, environment: "stage", costCenter: "cc-42" };
+
+ const personalizedFiles = [...reportedFiles.entries()].map(([path, content]) => ({
+ path,
+ content: personalizeRepositoryContent(content, completeInput)
+ }));
+
  assert.deepEqual(
- findRecognizedPlaceholders("image: __DOCKER_IMAGE__\nname: **SERVICE_SLUG**\nkeep: $SERVICE_NAME"),
+ personalizedFiles.flatMap(({ path, content }) => findRecognizedPlaceholders(content).map((placeholder) => ({ path, placeholder }))),
+ []
+ );
+ assert.match(personalizedFiles.find(({ path }) => path === ".env.example")!.content, /SERVICE_NAME=continue-api/);
+ assert.match(personalizedFiles.find(({ path }) => path === "README.md")!.content, /Platform Team \(owner@example\.com\)/);
+ assert.match(personalizedFiles.find(({ path }) => path === "src/server.ts")!.content, /cc-42/);
+});
+
+test("reports only canonical generation-time placeholders by name", () => {
+ assert.deepEqual(
+ findRecognizedPlaceholders("image: __DOCKER_IMAGE__\nname: __SERVICE_SLUG__\nkeep: $SERVICE_NAME\nlegacy: **SERVICE_NAME**"),
  ["SERVICE_SLUG", "DOCKER_IMAGE"]
  );
 });
