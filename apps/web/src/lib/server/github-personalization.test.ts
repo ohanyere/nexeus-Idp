@@ -31,20 +31,32 @@ test("personalizes recognized placeholders in every text-file context", () => {
 
 test("regenerates .github/workflows/ci.yaml without unresolved service placeholders", () => {
  const workflow = [
- "name: CI for **SERVICE_NAME**",
- "env:",
- "  IMAGE: 'docker.io/${{ secrets.DOCKERHUB_USERNAME }}/**SERVICE_NAME**:${{ github.sha }}'",
- "  NAME: __SERVICE_NAME__",
- "  CANONICAL_IMAGE: __DOCKER_IMAGE__:${{ github.sha }}"
+ "jobs:",
+ "  build:",
+ "    uses: org/workflows/.github/workflows/build.yaml@main",
+ "    with:",
+ "      service_name: **SERVICE_NAME**",
+ "      image_ref: kuberpull/**SERVICE_NAME**:${{ github.sha }}",
+ "  update-manifest:",
+ "    runs-on: ubuntu-latest",
+ "    steps:",
+ "      - name: Update image",
+ "        run: |",
+ "          perl -0pi -e 's#name: kuberpull/[^\\s]+#name: kuberpull/**SERVICE_NAME**#' deployment.yaml",
+ "          echo 'image=kuberpull/**SERVICE_NAME**:${{ github.sha }}'"
  ].join("\n");
 
- const personalized = personalizeRepositoryContent(workflow, input);
+ const personalized = personalizeRepositoryContent(workflow, {
+ ...input,
+ serviceName: "Review API"
+ });
 
- assert.match(personalized, /docker\.io\/\$\{\{ secrets\.DOCKERHUB_USERNAME \}\}\/continue-api:\$\{\{ github\.sha \}\}/);
- assert.match(personalized, /name: CI for continue-api/);
- assert.match(personalized, /kuberpull\/continue-api:\$\{\{ github\.sha \}\}/);
+ assert.match(personalized, /service_name: review-api/);
+ assert.match(personalized, /image_ref: kuberpull\/review-api:\$\{\{ github\.sha \}\}/);
+ assert.match(personalized, /perl .*name: kuberpull\/review-api/);
+ assert.match(personalized, /echo 'image=kuberpull\/review-api:\$\{\{ github\.sha \}\}'/);
  assert.deepEqual(findRecognizedPlaceholders(personalized), []);
- assert.doesNotMatch(personalized, /SERVICE_NAME/);
+ assert.doesNotMatch(personalized, /\*\*SERVICE_NAME\*\*/);
 });
 
 test("normalizes Docker-compatible service image names", () => {

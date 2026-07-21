@@ -73,10 +73,11 @@ export function personalizeRepositoryContent(content: string, input: TemplatePer
  let personalized = content;
 
  for (const [placeholder, value] of Object.entries(replacements)) {
- for (const token of getPlaceholderTokens(placeholder as RecognizedTemplatePlaceholderName)) {
- personalized = personalized.replaceAll(token, value);
+ personalized = personalized.replaceAll(`__${placeholder}__`, value);
  }
- }
+
+ // Legacy workflow image/name inputs represent the Docker-safe service slug.
+ personalized = personalized.replaceAll("**SERVICE_NAME**", serviceSlug);
 
  return personalized;
 }
