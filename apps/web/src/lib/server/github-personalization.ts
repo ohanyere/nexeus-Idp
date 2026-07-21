@@ -1,4 +1,4 @@
-import { PLATFORM_DOCKER_HUB_NAMESPACE } from "../platform.ts";
+import { PLATFORM_DOCKER_HUB_NAMESPACE } from "../platform";
 
 export const recognizedTemplatePlaceholderNames = [
  "SERVICE_NAME",

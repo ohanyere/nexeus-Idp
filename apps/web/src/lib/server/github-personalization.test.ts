@@ -6,7 +6,7 @@ import {
  isSafeTemplateTextFile,
  personalizeRepositoryContent,
  toServiceSlug
-} from "./github-personalization.ts";
+} from "./github-personalization";
 
 const input = {
  serviceName: "continue-api",
