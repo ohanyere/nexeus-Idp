@@ -25,10 +25,7 @@ export type UnresolvedTemplatePlaceholder = {
  placeholders: RecognizedTemplatePlaceholderName[];
 };
 
-const placeholderTokens = recognizedTemplatePlaceholderNames.flatMap((name) => [
- `__${name}__`,
- `**${name}**`
-]);
+const placeholderTokens = recognizedTemplatePlaceholderNames.map((name) => `__${name}__`);
 
 export function toServiceSlug(value: string) {
  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unknown-service";
@@ -38,32 +35,16 @@ function toTeamSlug(value: string) {
  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unknown-team";
 }
 
-export function isSafeTemplateTextFile(path: string) {
- const fileName = path.split("/").pop() ?? path;
-
- if (fileName === "Dockerfile" || fileName === "Makefile" || fileName === "package.json" || fileName === "tsconfig.json") {
- return true;
- }
-
- if (/^\.github\/workflows\/[^/]+\.ya?ml$/.test(path)) {
- return true;
- }
-
- if (/^(k8s|platform|monitoring)\/.+\.ya?ml$/.test(path)) {
- return true;
- }
-
- return /^docs\/.+\.md$/.test(path);
-}
-
 export function findRecognizedPlaceholders(content: string): RecognizedTemplatePlaceholderName[] {
- return recognizedTemplatePlaceholderNames.filter((name) => (
- content.includes(`__${name}__`) || content.includes(`**${name}**`)
- ));
+ return recognizedTemplatePlaceholderNames.filter((name) => content.includes(`__${name}__`));
 }
 
 export function hasRecognizedTemplatePlaceholder(content: string) {
  return placeholderTokens.some((placeholder) => content.includes(placeholder));
+}
+
+export function isPersonalizableTemplateText(content: string) {
+ return !content.includes("\0") && hasRecognizedTemplatePlaceholder(content);
 }
 
 export function personalizeRepositoryContent(content: string, input: TemplatePersonalizationValues) {
@@ -83,9 +64,7 @@ export function personalizeRepositoryContent(content: string, input: TemplatePer
  let personalized = content;
 
  for (const [placeholder, value] of Object.entries(replacements)) {
- personalized = personalized
- .replaceAll(`__${placeholder}__`, value)
- .replaceAll(`**${placeholder}**`, value);
+ personalized = personalized.replaceAll(`__${placeholder}__`, value);
  }
 
  return personalized;
