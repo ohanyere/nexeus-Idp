@@ -3,6 +3,14 @@ import "server-only";
 import { Octokit } from "@octokit/rest";
 
 import type { GoldenPathTemplate } from "@/lib/github-template";
+import {
+ findRecognizedPlaceholders,
+ formatUnresolvedPlaceholders,
+ hasRecognizedTemplatePlaceholder,
+ isSafeTemplateTextFile,
+ personalizeRepositoryContent,
+ type UnresolvedTemplatePlaceholder
+} from "@/lib/server/github-personalization";
 import { encryptGitHubActionsSecret } from "@/lib/server/secret-encryption";
 
 export type RepositoryInfo = {
@@ -81,6 +89,7 @@ export type PersonalizeRepositoryTemplateResult = {
  failedFilePaths?: string[];
  retryStatistics?: GitHubFileUpdateRetryStatistics;
  remainingPlaceholderFilePaths: string[];
+ unresolvedPlaceholders?: UnresolvedTemplatePlaceholder[];
  placeholdersReplaced: boolean;
  defaultBranch?: string;
  readyCommitSha?: string;
@@ -103,6 +112,7 @@ export type GitHubFileUpdateRetryStatistics = {
 
 export type GitHubTemplatePersonalizationDiagnostics = Partial<RepositoryReadinessResult> & {
  retryStatistics?: GitHubFileUpdateRetryStatistics;
+ unresolvedPlaceholders?: UnresolvedTemplatePlaceholder[];
 };
 
 type TemplateConfig = {
@@ -134,14 +144,6 @@ type RepositoryContentFile = {
  encoding?: string;
  sha?: string;
 };
-
-const templatePlaceholders = [
- "__SERVICE_NAME__",
- "__TEAM_NAME__",
- "__OWNER_EMAIL__",
- "__ENVIRONMENT__",
- "__COST_CENTER__"
-];
 
 const templateEnvVars: Record<GoldenPathTemplate, string> = {
  "go-api": "GITHUB_TEMPLATE_REPO_GO_API",
@@ -306,56 +308,6 @@ function sleep(milliseconds: number) {
 
 function toSlug(value: string) {
  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unknown-team";
-}
-
-function escapeRegExp(value: string) {
- return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function isSafeTemplateTextFile(path: string) {
- const fileName = path.split("/").pop() ?? path;
-
- if (fileName === "Dockerfile" || fileName === "Makefile" || fileName === "package.json" || fileName === "tsconfig.json") {
- return true;
- }
-
- if (path.match(/^\.github\/workflows\/[^/]+\.ya?ml$/)) {
- return true;
- }
-
- if (path.match(/^(k8s|platform|monitoring)\/.+\.yaml$/)) {
- return true;
- }
-
- return path.match(/^docs\/.+\.md$/) !== null;
-}
-
-function hasTemplatePlaceholder(content: string) {
- return templatePlaceholders.some((placeholder) => content.includes(placeholder));
-}
-
-function personalizeRepositoryContent(content: string, input: PersonalizeRepositoryTemplateInput) {
- const environment = input.environment?.trim() || "dev";
- const costCenter = input.costCenter?.trim() || toSlug(input.teamName);
- const replacements: Record<string, string> = {
- "__SERVICE_NAME__": input.serviceName,
- "__TEAM_NAME__": input.teamName,
- "__OWNER_EMAIL__": input.ownerEmail,
- "__ENVIRONMENT__": environment,
- "__COST_CENTER__": costCenter
- };
-
- let personalized = content;
-
- for (const [placeholder, value] of Object.entries(replacements)) {
- personalized = personalized.replaceAll(placeholder, value);
- }
-
- const serviceNamePattern = escapeRegExp(input.serviceName);
- const tagPattern = "(\\$\\{\\{[^}]+\\}\\}|[A-Za-z0-9._${}<>-]+)";
- const dockerImagePattern = new RegExp(`(?<![\\w./-])(?:docker\\.io/)?(?:[a-z0-9][a-z0-9._-]*/)?${serviceNamePattern}:${tagPattern}`, "g");
-
- return personalized.replace(dockerImagePattern, `kuberpull/${input.serviceName}:$1`);
 }
 
 function buildFleetRegistryContent(serviceName: string, environment: FleetRegistryEnvironment) {
@@ -758,6 +710,54 @@ export class GitHubService {
  throw new GitHubTemplatePersonalizationError(`Could not update ${input.path} in ${this.organization}/${input.repo}.`);
  }
 
+ private async findUnresolvedRepositoryPlaceholders(repo: string, branch: string) {
+ const refResponse = await this.octokit.git.getRef({
+ owner: this.organization,
+ repo,
+ ref: `heads/${branch}`
+ });
+ const commitResponse = await this.octokit.git.getCommit({
+ owner: this.organization,
+ repo,
+ commit_sha: refResponse.data.object.sha
+ });
+ const treeResponse = await this.octokit.git.getTree({
+ owner: this.organization,
+ repo,
+ tree_sha: commitResponse.data.tree.sha,
+ recursive: "true"
+ });
+
+ if (treeResponse.data.truncated) {
+ throw new GitHubTemplatePersonalizationError(
+ `Could not validate placeholders in ${this.organization}/${repo}: GitHub returned a truncated repository tree.`
+ );
+ }
+
+ const unresolved: UnresolvedTemplatePlaceholder[] = [];
+ const files = treeResponse.data.tree.filter((item) => item.type === "blob" && item.path && item.sha);
+
+ for (const file of files) {
+ const blobResponse = await this.octokit.git.getBlob({
+ owner: this.organization,
+ repo,
+ file_sha: file.sha!
+ });
+ const content = Buffer.from(blobResponse.data.content, "base64").toString("utf8");
+
+ if (content.includes("\0")) {
+ continue;
+ }
+
+ const placeholders = findRecognizedPlaceholders(content);
+ if (placeholders.length > 0) {
+ unresolved.push({ path: file.path!, placeholders });
+ }
+ }
+
+ return unresolved;
+ }
+
  async personalizeRepositoryTemplate(input: PersonalizeRepositoryTemplateInput): Promise<PersonalizeRepositoryTemplateResult> {
  const ref = input.readiness.readyCommitSha;
  const branch = input.readiness.defaultBranch;
@@ -826,7 +826,7 @@ export class GitHubService {
  const originalContent = Buffer.from(fileContents.content, "base64").toString("utf8");
  const personalizedContent = personalizeRepositoryContent(originalContent, input);
 
- if (hasTemplatePlaceholder(personalizedContent)) {
+ if (hasRecognizedTemplatePlaceholder(personalizedContent)) {
  remainingPlaceholderFilePaths.push(file.path);
  }
 
@@ -889,6 +889,25 @@ export class GitHubService {
  );
  }
 
+ const unresolvedPlaceholders = await this.findUnresolvedRepositoryPlaceholders(input.repo, branch);
+ remainingPlaceholderFilePaths.splice(
+ 0,
+ remainingPlaceholderFilePaths.length,
+ ...unresolvedPlaceholders.map(({ path }) => path)
+ );
+
+ if (unresolvedPlaceholders.length > 0) {
+ throw new GitHubTemplatePersonalizationError(
+ `Repository setup stopped because unresolved template placeholders remain in ${this.organization}/${input.repo}: ` +
+ `${formatUnresolvedPlaceholders(unresolvedPlaceholders)}.`,
+ {
+ ...diagnostics,
+ retryStatistics,
+ unresolvedPlaceholders
+ }
+ );
+ }
+
  const warnings = [
  remainingPlaceholderFilePaths.length > 0
  ? `Template personalization left placeholders in ${remainingPlaceholderFilePaths.length} file(s): ${remainingPlaceholderFilePaths.join(", ")}.`
@@ -922,6 +941,7 @@ export class GitHubService {
  failedFilePaths,
  retryStatistics,
  remainingPlaceholderFilePaths,
+ unresolvedPlaceholders,
  placeholdersReplaced: remainingPlaceholderFilePaths.length === 0,
  defaultBranch: input.readiness.defaultBranch,
  readyCommitSha: input.readiness.readyCommitSha,

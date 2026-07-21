@@ -318,6 +318,7 @@ export async function POST(request: Request) {
  safeFileCount: 0,
  personalizedFileCount: 0,
  remainingPlaceholderFilePaths: [],
+ unresolvedPlaceholders: [],
  placeholdersReplaced: false,
  defaultBranch: undefined,
  readyCommitSha: undefined,
