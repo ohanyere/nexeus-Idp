@@ -7,7 +7,7 @@ import {
  findRecognizedPlaceholders,
  formatUnresolvedPlaceholders,
  hasRecognizedTemplatePlaceholder,
- isSafeTemplateTextFile,
+ isPersonalizableTemplateText,
  personalizeRepositoryContent,
  type UnresolvedTemplatePlaceholder
 } from "@/lib/server/github-personalization";
@@ -646,7 +646,7 @@ export class GitHubService {
  throw new GitHubTemplatePersonalizationError(`Could not read repository contents for ${this.organization}/${repo}.`);
  }
 
- private async listSafeTemplateFiles(
+ private async listTemplateFiles(
  repo: string,
  readiness: RepositoryReadinessResult
  ): Promise<{ scannedFileCount: number; readyTreeSha: string; treeFileCount: number; files: SafeRepositoryFile[] }> {
@@ -669,9 +669,7 @@ export class GitHubService {
  scannedFileCount: blobEntries.length,
  readyTreeSha,
  treeFileCount: blobEntries.length,
- files: blobEntries
- .filter((item) => item.path && isSafeTemplateTextFile(item.path))
- .map((item) => ({
+ files: blobEntries.map((item) => ({
  path: item.path,
  sha: item.sha
  }))
@@ -766,7 +764,7 @@ export class GitHubService {
  let diagnostics: RepositoryReadinessResult = input.readiness;
 
  try {
- const listing = await this.listSafeTemplateFiles(input.repo, input.readiness);
+ const listing = await this.listTemplateFiles(input.repo, input.readiness);
  scannedFileCount = listing.scannedFileCount;
  files = listing.files;
  diagnostics = {
@@ -824,6 +822,11 @@ export class GitHubService {
  }
 
  const originalContent = Buffer.from(fileContents.content, "base64").toString("utf8");
+
+ if (!isPersonalizableTemplateText(originalContent)) {
+ continue;
+ }
+
  const personalizedContent = personalizeRepositoryContent(originalContent, input);
 
  if (hasRecognizedTemplatePlaceholder(personalizedContent)) {
