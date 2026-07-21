@@ -29,10 +29,11 @@ test("personalizes recognized placeholders in every text-file context", () => {
  assert.equal(isPersonalizableTemplateText("__SERVICE_NAME__\0binary"), false);
 });
 
-test("replaces service workflow placeholders with the normalized service slug", () => {
+test("regenerates .github/workflows/ci.yaml without unresolved service placeholders", () => {
  const workflow = [
+ "name: CI for **SERVICE_NAME**",
  "env:",
- "  IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/__SERVICE_SLUG__:${{ github.sha }}",
+ "  IMAGE: 'docker.io/${{ secrets.DOCKERHUB_USERNAME }}/**SERVICE_NAME**:${{ github.sha }}'",
  "  NAME: __SERVICE_NAME__",
  "  CANONICAL_IMAGE: __DOCKER_IMAGE__:${{ github.sha }}"
  ].join("\n");
@@ -40,8 +41,10 @@ test("replaces service workflow placeholders with the normalized service slug", 
  const personalized = personalizeRepositoryContent(workflow, input);
 
  assert.match(personalized, /docker\.io\/\$\{\{ secrets\.DOCKERHUB_USERNAME \}\}\/continue-api:\$\{\{ github\.sha \}\}/);
+ assert.match(personalized, /name: CI for continue-api/);
  assert.match(personalized, /kuberpull\/continue-api:\$\{\{ github\.sha \}\}/);
  assert.deepEqual(findRecognizedPlaceholders(personalized), []);
+ assert.doesNotMatch(personalized, /SERVICE_NAME/);
 });
 
 test("normalizes Docker-compatible service image names", () => {
@@ -74,9 +77,9 @@ test("replaces the complete canonical contract across reported template files", 
  assert.match(personalizedFiles.find(({ path }) => path === "src/server.ts")!.content, /cc-42/);
 });
 
-test("reports only canonical generation-time placeholders by name", () => {
+test("reports canonical and supported legacy generation-time placeholders by name", () => {
  assert.deepEqual(
  findRecognizedPlaceholders("image: __DOCKER_IMAGE__\nname: __SERVICE_SLUG__\nkeep: $SERVICE_NAME\nlegacy: **SERVICE_NAME**"),
- ["SERVICE_SLUG", "DOCKER_IMAGE"]
+ ["SERVICE_NAME", "SERVICE_SLUG", "DOCKER_IMAGE"]
  );
 });

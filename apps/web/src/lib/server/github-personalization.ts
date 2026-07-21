@@ -25,7 +25,12 @@ export type UnresolvedTemplatePlaceholder = {
  placeholders: RecognizedTemplatePlaceholderName[];
 };
 
-const placeholderTokens = recognizedTemplatePlaceholderNames.map((name) => `__${name}__`);
+function getPlaceholderTokens(name: RecognizedTemplatePlaceholderName) {
+ const tokens = [`__${name}__`];
+
+ // The CI workflow in the service template predates the canonical __NAME__ syntax.
+ return name === "SERVICE_NAME" ? [...tokens, "**SERVICE_NAME**"] : tokens;
+}
 
 export function toServiceSlug(value: string) {
  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unknown-service";
@@ -36,11 +41,15 @@ function toTeamSlug(value: string) {
 }
 
 export function findRecognizedPlaceholders(content: string): RecognizedTemplatePlaceholderName[] {
- return recognizedTemplatePlaceholderNames.filter((name) => content.includes(`__${name}__`));
+ return recognizedTemplatePlaceholderNames.filter((name) =>
+ getPlaceholderTokens(name).some((placeholder) => content.includes(placeholder))
+ );
 }
 
 export function hasRecognizedTemplatePlaceholder(content: string) {
- return placeholderTokens.some((placeholder) => content.includes(placeholder));
+ return recognizedTemplatePlaceholderNames.some((name) =>
+ getPlaceholderTokens(name).some((placeholder) => content.includes(placeholder))
+ );
 }
 
 export function isPersonalizableTemplateText(content: string) {
@@ -64,7 +73,9 @@ export function personalizeRepositoryContent(content: string, input: TemplatePer
  let personalized = content;
 
  for (const [placeholder, value] of Object.entries(replacements)) {
- personalized = personalized.replaceAll(`__${placeholder}__`, value);
+ for (const token of getPlaceholderTokens(placeholder as RecognizedTemplatePlaceholderName)) {
+ personalized = personalized.replaceAll(token, value);
+ }
  }
 
  return personalized;
