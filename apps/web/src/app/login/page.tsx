@@ -226,7 +226,7 @@ export default function LoginPage() {
                   </label>
                   <label className="grid gap-1.5 text-sm font-medium text-slate-800">
                     Password
-                    <input className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200" defaultValue="mock-password" type="password" />
+                    <input className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200" defaultValue="development-password" type="password" />
                   </label>
                   <div className="flex items-center justify-between gap-3 text-xs">
                     <label className="inline-flex items-center gap-2 font-medium text-slate-700">
@@ -268,7 +268,7 @@ export default function LoginPage() {
 
               <div className="mt-4 flex items-start gap-2 border-t border-slate-200 pt-3 text-xs leading-5 text-slate-500">
                 <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden="true" />
-                <p>{mockMode ? "Local demo access is scoped by the selected mock identity." : "GitHub identity maps to team ownership, environment permissions, and policy posture."}</p>
+                <p>{mockMode ? "Local access is scoped by the selected development identity." : "GitHub identity maps to team ownership, environment permissions, and policy posture."}</p>
               </div>
             </form>
 

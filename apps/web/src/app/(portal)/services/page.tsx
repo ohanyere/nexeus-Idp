@@ -67,9 +67,9 @@ function toServiceListItem(service: CatalogApiService): Service {
  repository: service.repositoryUrl,
  documentation: {
  repository: service.repositoryUrl,
- runbook: "Mock runbook link",
- apiDocs: "Mock API docs link",
- eventDocs: "Mock event docs link",
+ runbook: "Runbook link",
+ apiDocs: "API documentation link",
+ eventDocs: "Event documentation link",
  owner: service.ownerEmail
  },
  platformContacts: ["platform-oncall@example.com"],
@@ -176,7 +176,7 @@ export default function ServicesPage() {
 
  {catalogSource === "mock" && process.env.NODE_ENV === "development" ? (
  <section className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
- Showing development demo data because the database is not configured, unavailable, or empty.
+ Showing reference catalog data because the database is not configured, unavailable, or empty.
  </section>
  ) : null}
 

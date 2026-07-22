@@ -13,6 +13,7 @@ import {
  type PersonalizeRepositoryTemplateResult
 } from "@/lib/server/github";
 import { DatabaseConfigurationError } from "@/lib/server/prisma";
+import { canCompleteRepositoryInitialization } from "@/lib/server/github-bootstrap";
 
 type CreateServiceRequest = {
  name?: unknown;
@@ -42,6 +43,8 @@ type CreateServiceSteps = {
  secrets: WorkflowStep;
  fleetRegistry: WorkflowStep;
  catalog: WorkflowStep;
+ initialization: WorkflowStep;
+ ci: WorkflowStep;
 };
 
 const kebabCasePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -195,6 +198,14 @@ function createInitialSteps(): CreateServiceSteps {
  catalog: {
  status: "skipped",
  message: "Catalog persistence waits for the repository."
+ },
+ initialization: {
+ status: "skipped",
+ message: "Repository initialization waits for personalization, CI secrets, fleet registration, and catalog persistence."
+ },
+ ci: {
+ status: "skipped",
+ message: "CI waits for the repository initialization marker."
  }
  };
 }
@@ -217,7 +228,11 @@ function logDevelopmentStepError(step: keyof CreateServiceSteps, error: unknown)
 }
 
 function isCriticalWorkflowSuccess(steps: CreateServiceSteps) {
- return steps.repository.status === "success" && steps.personalization.status === "success" && steps.catalog.status === "success";
+ return steps.repository.status === "success"
+ && steps.personalization.status === "success"
+ && steps.catalog.status === "success"
+ && steps.initialization.status === "success"
+ && steps.ci.status === "success";
 }
 
 function hasWorkflowWarning(steps: CreateServiceSteps) {
@@ -481,12 +496,80 @@ export async function POST(request: Request) {
  };
  }
 
+ const initializationReady = canCompleteRepositoryInitialization({
+ personalization: steps.personalization.status === "success",
+ secrets: steps.secrets.status === "success",
+ fleetRegistry: steps.fleetRegistry.status === "success",
+ catalog: steps.catalog.status === "success"
+ });
+
+ if (initializationReady) {
+ try {
+ const initialization = await github.completeRepositoryInitialization(repository.name, repository.defaultBranch);
+ steps.initialization = {
+ status: "success",
+ message: initialization.status === "created" ? "Repository initialized." : "Repository was already initialized.",
+ details: initialization
+ };
+
+ if (initialization.status === "created") {
+ const workflowRun = await github.waitForWorkflowRun(repository.name, initialization.commitSha);
+ if (workflowRun) {
+ steps.ci = {
+ status: workflowRun.status === "completed" && workflowRun.conclusion !== "success" ? "failed" : "success",
+ message: workflowRun.status === "completed"
+ ? `CI workflow completed with status ${workflowRun.conclusion ?? "unknown"}.`
+ : `CI workflow started and is ${workflowRun.status}.`,
+ details: {
+ workflowRunUrl: workflowRun.url,
+ workflowRunId: workflowRun.id,
+ finalWorkflowStatus: workflowRun.conclusion ?? workflowRun.status,
+ headSha: workflowRun.headSha
+ }
+ };
+ } else {
+ steps.ci = {
+ status: "warning",
+ message: "Repository initialized, but GitHub did not report the marker-triggered workflow run before the observation timeout.",
+ details: { headSha: initialization.commitSha }
+ };
+ }
+ } else {
+ steps.ci = {
+ status: "success",
+ message: "Repository was already initialized; normal push-triggered CI remains enabled."
+ };
+ }
+ } catch (initializationError) {
+ logDevelopmentStepError("initialization", initializationError);
+ steps.initialization = {
+ status: "failed",
+ message: `Repository initialization failed: ${getErrorMessage(initializationError)}`
+ };
+ steps.ci = {
+ status: "skipped",
+ message: "Full CI was not triggered because repository initialization did not complete."
+ };
+ }
+ } else {
+ steps.initialization = {
+ status: "failed",
+ message: "Repository initialization marker was withheld because one or more required initialization steps failed."
+ };
+ steps.ci = {
+ status: "skipped",
+ message: "Full CI was not triggered because repository initialization did not complete."
+ };
+ }
+
  const warning = joinWarnings([
  steps.personalization.status !== "success" ? steps.personalization.message : undefined,
  steps.fleetDiscovery.status === "warning" ? steps.fleetDiscovery.message : undefined,
  steps.secrets.status === "warning" ? `${steps.secrets.message} Needs platform attention.` : undefined,
  steps.fleetRegistry.status === "warning" ? steps.fleetRegistry.message : undefined,
- steps.catalog.status !== "success" ? steps.catalog.message : undefined
+ steps.catalog.status !== "success" ? steps.catalog.message : undefined,
+ steps.initialization.status !== "success" ? steps.initialization.message : undefined,
+ steps.ci.status === "warning" || steps.ci.status === "failed" ? steps.ci.message : undefined
  ]) || undefined;
 
  return NextResponse.json({
@@ -505,11 +588,11 @@ export async function POST(request: Request) {
  if (error instanceof GitHubConfigurationError) {
  steps.repository = {
  status: "skipped",
- message: `${error.message} Returning demo repository information without calling GitHub.`
+ message: `${error.message} Returning repository preview information without calling GitHub.`
  };
  steps.secrets = {
  status: "skipped",
- message: "GitHub repository generation ran in demo mode, so CI secrets were not configured."
+ message: "GitHub repository generation is unavailable, so CI secrets were not configured."
  };
 
  return NextResponse.json({

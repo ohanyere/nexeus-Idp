@@ -59,12 +59,12 @@ export default function ScorecardsPage() {
 
  return (
  <>
- <PageHeader title="Scorecards" description="Mock production-readiness scorecards across ownership, documentation, security, observability, rollback, approval, and disaster recovery standards." />
+ <PageHeader title="Scorecards" description="Production-readiness scorecards across ownership, documentation, security, observability, rollback, approval, and disaster recovery standards." />
  <section className="grid gap-4 md:grid-cols-4">
- <StatCard label="Average platform score" value={`${averageScore}%`} detail="Mock scorecard average" tone={averageScore >= 85 ? "success" : "warning"} />
+ <StatCard label="Average platform score" value={`${averageScore}%`} detail="Scorecard average" tone={averageScore >= 85 ? "success" : "warning"} />
  <StatCard label="Below production-ready" value={String(belowReady.length)} detail="Services needing maturity work" tone="warning" />
  <StatCard label="Checks evaluated" value="12" detail="Per service" />
- <StatCard label="Production-ready" value={String(enriched.filter((item) => item.maturityLevel === "production-ready").length)} detail="Mock mature services" tone="success" />
+ <StatCard label="Production-ready" value={String(enriched.filter((item) => item.maturityLevel === "production-ready").length)} detail="Mature services" tone="success" />
  </section>
 
  <section className="console-panel rounded-md p-5">

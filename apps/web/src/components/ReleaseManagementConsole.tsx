@@ -174,7 +174,7 @@ export function ReleaseManagementConsole({ releases, warning }: ReleaseManagemen
  onClick={() => setDrawerDetail({
   service: "Release catalog",
   environment: "dev",
-  reason: "Demo data fallback active",
+  reason: "Reference catalog fallback active",
   timestamp: new Date().toISOString(),
   details: warning,
   kind: "release-state"
@@ -182,7 +182,7 @@ export function ReleaseManagementConsole({ releases, warning }: ReleaseManagemen
  className="mt-4 inline-flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100"
  >
  <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
- Demo fallback active · View Details
+ Reference catalog active · View Details
  </button>
  ) : null}
  </header>
@@ -417,7 +417,7 @@ function ExpandedRelease({ release, onDetails }: { release: ReleaseConsoleItem; 
  <div className="grid gap-1 text-xs">
  <p className="font-semibold text-slate-950">Overview</p>
  <p className="text-slate-600">{release.repositoryOwner}/{release.repositoryName}</p>
- <p className="text-slate-500">{release.source === "catalog" ? "Persisted catalog" : "Demo fallback"} · {release.defaultBranch}</p>
+ <p className="text-slate-500">{release.source === "catalog" ? "Persisted catalog" : "Reference catalog"} · {release.defaultBranch}</p>
  </div>
  <div className="grid gap-1 text-xs">
  <p className="font-semibold text-slate-950">Latest timeline</p>
@@ -538,7 +538,7 @@ function ReleaseDetailsDrawer({ release, onClose }: { release: ReleaseConsoleIte
  <KeyValue label="Team" value={release.teamName} />
  <KeyValue label="Repository" value={`${release.repositoryOwner}/${release.repositoryName}`} href={release.repositoryUrl} />
  <KeyValue label="Default branch" value={release.defaultBranch} />
- <KeyValue label="Source" value={release.source === "catalog" ? "Persisted catalog" : "Demo fallback"} />
+ <KeyValue label="Source" value={release.source === "catalog" ? "Persisted catalog" : "Reference catalog"} />
  </DetailPanel>
  <DetailPanel title="Current environments" icon={<Server className="h-4 w-4" aria-hidden="true" />}>
  <EnvironmentDetailList release={release} />

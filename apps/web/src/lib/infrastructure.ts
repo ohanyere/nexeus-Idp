@@ -118,7 +118,7 @@ export const resourceCatalog: ResourceCatalogItem[] = [
   item("dynamodb-table", "DynamoDB Table", "DynamoDB Table", "Key-value table claim with on-demand billing for service state.", "Data Platform", false, "$60", envs, "Crossplane", ["region", "hashKey", "billingMode", "deletionPolicy"], ["service state", "idempotency store"], ["namespace", "secret"], "dynamodb-table"),
   item("rds-instance", "RDS Instance", "RDS Instance", "Dedicated RDS instance for regulated workloads.", "Data Platform", true, "$420", ["prod"], "Terraform Cloud", ["engine", "size", "multi-az", "backup"], ["tier 0 database"], ["vpc", "secret"]),
   item("namespace", "Namespace", "Kubernetes Namespace", "Isolated Kubernetes namespace with quotas and baseline policy.", "Platform Engineering", false, "$0", envs, "Kubernetes", ["name", "labels", "quota"], ["service boundary"], ["rbac"]),
-  item("secret", "Secret", "Secret", "Kubernetes secret placeholder for future external secret integration.", "Security Platform", true, "$0", envs, "Kubernetes", ["keys", "rotation", "owner"], ["application credentials"], ["namespace"]),
+  item("secret", "Secret", "Secret", "Kubernetes secret definition for external secret integration.", "Security Platform", true, "$0", envs, "Kubernetes", ["keys", "rotation", "owner"], ["application credentials"], ["namespace"]),
   item("configmap", "ConfigMap", "ConfigMap", "Runtime configuration map with ownership metadata.", "Platform Engineering", false, "$0", envs, "Kubernetes", ["keys", "labels"], ["app configuration"], ["namespace"]),
   item("persistent-volume", "Persistent Volume", "Persistent Volume", "Persistent storage claim for stateful workloads.", "Runtime Platform", true, "$75", ["stage", "prod"], "Kubernetes", ["size", "class", "backup"], ["stateful workload"], ["namespace"]),
   item("dns-record", "DNS Record", "DNS Record", "Internal or external DNS record request.", "Network Platform", true, "$10", ["stage", "prod"], "Terraform Cloud", ["hostname", "target", "ttl"], ["service endpoint"], ["load balancer"])
@@ -210,7 +210,7 @@ function provisioned(id: string, name: string, type: InfrastructureResourceType,
     linkedServiceIds,
     configuration: { size: type.includes("Redis") ? "2Gi" : "standard", backup: environment === "prod" ? "daily" : "none", region },
     labels: { "platform.io/team": teamId, "platform.io/environment": environment, "platform.io/owner": owner },
-    events: [`${name} request reconciled`, `${provider} mock claim observed`, `${status} status recorded`],
+    events: [`${name} request reconciled`, `${provider} claim observed`, `${status} status recorded`],
     audit: [
       { event: "Request Created", actor: owner, time: "2026-06-11 08:10", tone: "neutral" },
       { event: "Approved", actor: "Jordan Lee", time: "2026-06-11 08:18", tone: "success" },

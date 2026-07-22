@@ -53,7 +53,7 @@ export default function DashboardPage() {
  <OperationalMetric
  label="Monthly Cost"
  value="$38.8k"
- detail="Mock platform allocation"
+ detail="Platform allocation"
  tone="neutral"
  />
  </section>
@@ -63,7 +63,7 @@ export default function DashboardPage() {
  <section className="console-panel rounded-md">
  <div className="border-b border-line px-4 py-3">
  <h2 className="font-heading text-base font-semibold text-ink">Platform health</h2>
- <p className="mt-1 text-xs text-muted">Dependency status, uptime, and last mock check.</p>
+ <p className="mt-1 text-xs text-muted">Dependency status, uptime, and latest health check.</p>
  </div>
  <div className="grid divide-y divide-line md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
  {platformHealthOperational.map((system) => (

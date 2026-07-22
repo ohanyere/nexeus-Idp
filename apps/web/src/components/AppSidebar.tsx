@@ -69,7 +69,7 @@ export function AppSidebar() {
  </nav>
  <div className="border-t border-slate-200 px-4 py-3">
  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Tenant</p>
- <p className="mt-1 truncate text-xs font-semibold text-slate-900">Nexus Platform Demo</p>
+ <p className="mt-1 truncate text-xs font-semibold text-slate-900">Nexus Platform</p>
  <p className="mt-0.5 text-[0.7rem] leading-4 text-slate-500">Internal developer workspace</p>
  </div>
  </aside>

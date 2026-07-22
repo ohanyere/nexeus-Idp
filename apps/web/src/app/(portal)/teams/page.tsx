@@ -34,12 +34,12 @@ export default function TeamsPage() {
  <>
  <PageHeader
  title="Teams"
- description="Manage team ownership boundaries, membership shape, service responsibility, and mock operational posture."
+ description="Manage team ownership boundaries, membership, service responsibility, and operational posture."
  action={<InviteMemberButton />}
  />
  <section className="grid gap-4 md:grid-cols-3">
- <StatCard label="Teams" value={String(teams.length)} detail="Mock tenant groups" />
- <StatCard label="Members" value={String(memberCount)} detail="Mock people records" />
+ <StatCard label="Teams" value={String(teams.length)} detail="Tenant groups" />
+ <StatCard label="Members" value={String(memberCount)} detail="People records" />
  <StatCard label="Owned services" value={String(serviceCount)} detail="Catalog ownership links" />
  </section>
  <DataTable columns={["team", "owner", "members", "services", "resources", "slack", "github org", "cost center", "ownership", "monthly cost", "deployments", "incidents", "violations"]} rows={rows} />

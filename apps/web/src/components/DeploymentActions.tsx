@@ -28,7 +28,7 @@ export function RollbackButton({ deployment, compact = false }: RollbackButtonPr
  function handleRollbackRequest() {
  if (!can("rollback deployment")) {
  notifyError("Rollback request blocked", {
- description: `${selectedRole} cannot request rollbacks in this mock RBAC model.`
+ description: `${selectedRole} cannot request rollbacks with the current RBAC policy.`
  });
  return;
  }
@@ -54,7 +54,7 @@ export function RollbackButton({ deployment, compact = false }: RollbackButtonPr
  <section className="w-full max-w-xl overflow-hidden rounded-md border border-line bg-white shadow-none">
  <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-canvas px-5 py-4">
  <div>
- <h2 className="font-heading text-lg font-semibold text-ink">Confirm mock rollback</h2>
+ <h2 className="font-heading text-lg font-semibold text-ink">Confirm rollback request</h2>
  <p className="mt-1 text-sm text-muted">
  {deployment.service} {deployment.environment} is currently on {deployment.version}.
  </p>
@@ -71,11 +71,11 @@ export function RollbackButton({ deployment, compact = false }: RollbackButtonPr
 
  <div className="grid gap-4 px-5 py-5">
  <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
- This rollback is mock-only. No GitOps change, ArgoCD sync, Argo Rollouts action, or Kubernetes update will be triggered.
+ This rollback is a request preview. No GitOps change, ArgoCD sync, Argo Rollouts action, or Kubernetes update will be triggered.
  </p>
  {!can("rollback deployment") ? (
  <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
- {selectedRole} cannot request rollbacks in this mock RBAC model.
+ {selectedRole} cannot request rollbacks with the current RBAC policy.
  </p>
  ) : null}
 
@@ -115,7 +115,7 @@ export function RollbackButton({ deployment, compact = false }: RollbackButtonPr
  disabled={!can("rollback deployment")}
  className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-none transition hover:bg-brand disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
  >
- Confirm mock rollback
+ Confirm rollback request
  </button>
  </div>
  </section>
@@ -162,7 +162,7 @@ export function DeployNewVersionButton() {
 
  notifySuccess("Deployment request recorded", {
  id: toastId,
- description: "This remains mock-only. No deployment system was called."
+ description: "The request was recorded. No deployment system was called."
  });
  }
 
@@ -192,7 +192,7 @@ export function DeployNewVersionButton() {
  <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-canvas px-5 py-4">
  <div>
  <h2 className="font-heading text-lg font-semibold text-ink">Deploy new version</h2>
- <p className="mt-1 text-sm text-muted">Mock deployment request only. No external systems will be called.</p>
+ <p className="mt-1 text-sm text-muted">Deployment request preview only. No external systems will be called.</p>
  </div>
  <button
  type="button"
@@ -269,13 +269,13 @@ export function DeployNewVersionButton() {
  </fieldset>
 
  <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
- <p className="font-semibold text-ink">Mock preview</p>
+ <p className="font-semibold text-ink">Request preview</p>
  <p className="mt-1">{selectedService?.name} to {form.environment} using {form.imageTag}</p>
  <p className="mt-1">Rollout strategy: {form.rolloutStrategy}</p>
  </div>
  {!allowed ? (
  <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-3 text-sm text-rose-900">
- {selectedRole} does not have permission to {requiredPermission}. This mock request is visually blocked.
+ {selectedRole} does not have permission to {requiredPermission}. This request is blocked.
  </div>
  ) : null}
 
@@ -284,7 +284,7 @@ export function DeployNewVersionButton() {
  disabled={!allowed}
  className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-none transition hover:bg-brand disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
  >
- Start mock deployment
+ Start deployment request
  </button>
 
  </form>

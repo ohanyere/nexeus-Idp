@@ -187,7 +187,7 @@ function mockReleaseToConsoleItem(promotion: (typeof environmentPromotions)[numb
  return {
   serviceId: promotion.serviceId,
   serviceName: service?.name ?? promotion.serviceId,
-  teamName: service?.team ?? "Demo team",
+  teamName: service?.team ?? "Platform team",
   repositoryOwner: promotion.repositoryOwner,
   repositoryName: promotion.repositoryName,
   repositoryUrl: `https://github.com/${promotion.repositoryOwner}/${promotion.repositoryName}`,

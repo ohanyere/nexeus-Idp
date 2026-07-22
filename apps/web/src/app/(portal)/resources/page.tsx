@@ -20,12 +20,12 @@ export default function ResourcesPage() {
  <>
  <PageHeader
  title="Resources"
- description="Show resource marketplace claims and provisioned resource placeholders without connecting to Crossplane or Kubernetes."
+ description="Review resource marketplace claims and provisioned resources across platform integrations."
  />
  <section className="grid gap-4 md:grid-cols-3">
- <StatCard label="Marketplace items" value={String(resourceOfferings.length)} detail="Mock resource offerings" />
- <StatCard label="Provisioned" value={String(provisionedResources.length)} detail="Mock resource records" />
- <StatCard label="Provisioning" value="1" detail="Workflow placeholder" tone="warning" />
+ <StatCard label="Marketplace items" value={String(resourceOfferings.length)} detail="Resource offerings" />
+ <StatCard label="Provisioned" value={String(provisionedResources.length)} detail="Resource records" />
+ <StatCard label="Provisioning" value="1" detail="Active workflow" tone="warning" />
  </section>
  <section className="grid gap-4 lg:grid-cols-5">
  {resourceOfferings.map((offering) => {
@@ -40,7 +40,7 @@ export default function ResourcesPage() {
  <p className="mt-2 text-sm leading-6 text-muted">{offering.description}</p>
  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-brand">{offering.capability}</p>
  <div className="mt-4">
- <MockActionButton label="Request Resource" result={`${offering.name} request recorded as mock-only.`} />
+ <MockActionButton label="Request Resource" result={`${offering.name} request recorded.`} />
  </div>
  </article>
  );

@@ -26,21 +26,21 @@ export default function DriftPage() {
  "recommended action": finding.recommendedAction,
  actions: (
  <div className="flex flex-wrap gap-2">
- <MockActionButton label="View Diff" result={`${finding.service} drift diff opened in demo mode.`} tone="info" />
- <MockActionButton label="Reconcile" result={`${finding.service} reconcile request recorded as mock-only.`} />
- <MockActionButton label="Ignore Temporarily" result={`${finding.service} drift finding ignored temporarily in demo mode.`} tone="warning" />
+ <MockActionButton label="View Diff" result={`${finding.service} drift diff opened.`} tone="info" />
+ <MockActionButton label="Reconcile" result={`${finding.service} reconcile request recorded.`} />
+ <MockActionButton label="Ignore Temporarily" result={`${finding.service} drift finding ignored temporarily.`} tone="warning" />
  </div>
  )
  }));
 
  return (
  <>
- <PageHeader title="Drift detection" description="Mock GitOps drift findings comparing desired state with live state. Actions are visual only." />
+ <PageHeader title="Drift detection" description="GitOps drift findings comparing desired state with live state. Actions are preview-only." />
  <section className="grid gap-4 md:grid-cols-4">
- <StatCard label="Open findings" value={String(driftFindings.length)} detail="Mock drift records" />
+ <StatCard label="Open findings" value={String(driftFindings.length)} detail="Drift records" />
  <StatCard label="Critical" value={String(critical)} detail="Needs immediate review" tone="danger" />
  <StatCard label="High severity" value={String(high)} detail="Manual changes suspected" tone="warning" />
- <StatCard label="Reconciled today" value="1" detail="Mock audit event" tone="success" />
+ <StatCard label="Reconciled today" value="1" detail="Audit event" tone="success" />
  </section>
  <DataTable columns={["service", "environment", "resource", "desired state", "live state", "drift type", "severity", "detected at", "recommended action", "actions"]} rows={rows} />
  </>

@@ -47,7 +47,7 @@ export default async function DeploymentDetailPage({ params }: DeploymentDetailP
 
  <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
  <StatCard label="Environment" value={deployment.environment} detail="Deployment target" />
- <StatCard label="Status" value={deployment.status} detail="Demo deployment record" tone={deployment.tone} />
+ <StatCard label="Status" value={deployment.status} detail="Deployment record" tone={deployment.tone} />
  <StatCard label="Deployment type" value={deployment.deploymentType} detail={deployment.rolloutStrategy} />
  <StatCard label="Deployed by" value={deployment.deployedBy} detail={deployment.deployedAt} />
  </section>
@@ -133,7 +133,7 @@ export default async function DeploymentDetailPage({ params }: DeploymentDetailP
  <section className="console-panel rounded-md p-5">
  <h2 className="font-heading text-lg font-semibold text-ink">Rollback panel</h2>
  <p className="mt-2 text-sm leading-6 text-muted">
- Choose a previous stable version and record a mock rollback request. No GitOps, ArgoCD, Argo Rollouts, or Kubernetes action will run.
+ Choose a previous stable version and record a rollback request. No GitOps, ArgoCD, Argo Rollouts, or Kubernetes action will run.
  </p>
  <div className="mt-4 space-y-3">
  {deployment.previousStableVersions.map((version) => (

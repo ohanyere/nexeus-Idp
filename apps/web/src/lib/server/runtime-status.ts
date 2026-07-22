@@ -154,7 +154,7 @@ const sourceUnavailable: Record<RuntimeSource, string> = {
   Crossplane: "Kubernetes API access is required to read Crossplane claims.",
   Kyverno: "Kubernetes API access is required to read Kyverno PolicyReports.",
   Seed: "Catalog seed data is available, but it is not live runtime state.",
-  Demo: "Demo data is available, but it is not live runtime state."
+  Demo: "Reference data is available, but it is not live runtime state."
 };
 
 function signal(label: string, value: string, source: RuntimeSource, detail?: string): RuntimeSignal {

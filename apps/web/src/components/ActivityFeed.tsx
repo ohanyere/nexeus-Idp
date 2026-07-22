@@ -17,7 +17,7 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
  <section className="console-panel min-w-0 overflow-hidden rounded-md">
  <div className="border-b border-line px-4 py-3">
  <h2 className="font-heading text-base font-semibold text-ink">Activity feed</h2>
- <p className="mt-1 text-xs text-muted">Recent platform events across the mock tenant.</p>
+ <p className="mt-1 text-xs text-muted">Recent platform events across the tenant.</p>
  </div>
  <div className="divide-y divide-line">
  {items.map((item) => (

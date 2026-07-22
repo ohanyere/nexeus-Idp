@@ -8,10 +8,10 @@ export default function SettingsPage() {
  <>
  <PageHeader
  title="Settings"
- description="Represent tenant, environment, authentication, and integration configuration as static placeholders for the Phase 1 portal shell."
+ description="Review tenant, environment, authentication, and integration configuration."
  />
  <section className="grid gap-4 md:grid-cols-3">
- <StatCard label="Tenant mode" value="Mock scoped" detail="Topbar team switcher" />
+ <StatCard label="Tenant mode" value="Team scoped" detail="Topbar team switcher" />
  <StatCard label="Environments" value="3" detail="dev, stage, prod" />
  <StatCard label="Live connections" value="0" detail="No backend integrations yet" />
  </section>
@@ -19,7 +19,7 @@ export default function SettingsPage() {
  {[
  { title: "General", detail: "Tenant name, workspace mode, and environment defaults.", href: "/settings" },
  { title: "Notifications", detail: "Deployment, approval, rollback, policy, and invitation preferences.", href: "/notifications" },
- { title: "Integrations", detail: "Mock provider readiness for GitHub, Google, Microsoft, Keycloak, and Okta.", href: "/settings" },
+ { title: "Integrations", detail: "Provider readiness for GitHub, Google, Microsoft, Keycloak, and Okta.", href: "/settings" },
  { title: "Access", detail: "Roles, users, permissions, and team-scoped visibility.", href: "/settings/access-control" },
  { title: "API Keys", detail: "Personal and automation keys for future API usage.", href: "/settings/api-keys" },
  { title: "Personal", detail: "Profile, time zone, notification preferences, and session details.", href: "/profile" }

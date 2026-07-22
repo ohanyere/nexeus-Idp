@@ -68,7 +68,7 @@ export function PersonalDashboard() {
             </Row>
           ))}
         </Panel>
-        <Panel title="Platform Notifications" detail="Mock notification center preview.">
+        <Panel title="Platform Notifications" detail="Recent platform notification activity.">
           {dashboard.notifications.map((notification) => (
             <Row key={notification.id} href="/notifications" title={notification.title} detail={`${notification.category} · ${notification.time}`}>
               <StatusBadge label={notification.status} tone={notification.status === "Unread" ? "warning" : "neutral"} />

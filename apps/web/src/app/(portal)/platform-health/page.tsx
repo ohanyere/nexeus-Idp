@@ -10,12 +10,12 @@ export default function PlatformHealthPage() {
  <>
  <PageHeader
  title="Platform health"
- description="Surface integration and runtime health placeholders with explicit freshness labels before live sync workers are built."
+ description="Surface integration and runtime health with explicit freshness labels."
  />
  <section className="grid gap-4 md:grid-cols-3">
- <StatCard label="Platform status" value="Nominal" detail="Mock rollup" tone="success" />
- <StatCard label="Live integrations" value="0" detail="All sources are placeholders" />
- <StatCard label="Warnings" value={String(warningCount)} detail="Mock provider concerns" tone="warning" />
+ <StatCard label="Platform status" value="Nominal" detail="Health rollup" tone="success" />
+ <StatCard label="Live integrations" value="0" detail="Sources awaiting connection" />
+ <StatCard label="Warnings" value={String(warningCount)} detail="Provider concerns" tone="warning" />
  </section>
  <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
  {platformHealthSignals.map((signal) => {

@@ -15,12 +15,12 @@ export default function CostsPage() {
  <>
  <PageHeader
  title="Costs"
- description="Review mock month-to-date cost allocation by team while the real billing and observability integrations remain deferred."
+ description="Review month-to-date platform cost allocation by team."
  />
  <section className="grid gap-4 md:grid-cols-3">
- <StatCard label="Month to date" value="$38.8k" detail="Mock allocation total" />
+ <StatCard label="Month to date" value="$38.8k" detail="Allocation total" />
  <StatCard label="Largest driver" value="Commerce" detail="Checkout and catalog workloads" tone="warning" />
- <StatCard label="Unallocated" value="$0" detail="Demo data is fully assigned" tone="success" />
+ <StatCard label="Unallocated" value="$0" detail="All costs are assigned" tone="success" />
  </section>
  <DataTable columns={["scope", "month to date", "trend", "driver"]} rows={rows} />
  </>

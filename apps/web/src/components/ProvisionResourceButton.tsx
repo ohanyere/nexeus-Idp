@@ -311,7 +311,7 @@ export function ProvisionResourceButton({
                         <Review label="Owner" value={selectedService.ownerEmail} />
                       </dl>
                     ) : null}
-                    {serviceSource === "mock" ? <p className="text-xs text-muted">Demo services shown because the database catalog is empty.</p> : null}
+                    {serviceSource === "mock" ? <p className="text-xs text-muted">Reference services shown because the database catalog is empty.</p> : null}
                     {serviceLoadError ? <p className="text-xs text-rose-700">{serviceLoadError}</p> : null}
                   </WizardField>
                 </div>

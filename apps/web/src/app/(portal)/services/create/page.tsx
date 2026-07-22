@@ -7,7 +7,7 @@ import { celebrateSuccess, notifyError, notifyLoading, notifySuccess, notifyWarn
 import { createServiceOptions, teams, templates } from "@/lib/mock-data";
 import { PLATFORM_DOCKER_HUB_NAMESPACE } from "@/lib/platform";
 import { AlertTriangle, CheckCircle2, CircleDollarSign, ExternalLink, Eye, GitBranch, Loader2, PackageCheck, Rocket, ShieldCheck } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 type FormState = {
@@ -35,6 +35,11 @@ type WorkflowStep = {
  personalizedFileCount?: number;
  remainingPlaceholderFilePaths?: string[];
  configuredSecretNames?: string[];
+ workflowRunUrl?: string;
+ workflowRunId?: number;
+ finalWorkflowStatus?: string;
+ markerPath?: string;
+ commitSha?: string;
  files?: unknown[];
  [key: string]: unknown;
  };
@@ -53,6 +58,8 @@ type CreateServiceSteps = {
  secrets: WorkflowStep;
  fleetRegistry: WorkflowStep;
  catalog: WorkflowStep;
+ initialization: WorkflowStep;
+ ci: WorkflowStep;
 };
 
 type CreateServiceResponse = {
@@ -130,7 +137,11 @@ function isCriticalWorkflowComplete(steps?: CreateServiceSteps) {
  return false;
  }
 
- return steps.repository.status === "success" && steps.personalization.status === "success" && steps.catalog.status === "success";
+ return steps.repository.status === "success"
+ && steps.personalization.status === "success"
+ && steps.catalog.status === "success"
+ && steps.initialization.status === "success"
+ && steps.ci.status === "success";
 }
 
 function hasWorkflowWarning(steps?: CreateServiceSteps) {
@@ -172,7 +183,9 @@ function formatStepTitle(value: string) {
  personalization: "Personalization",
  secrets: "CI Secrets",
  fleetRegistry: "Fleet Registry",
- catalog: "Catalog"
+ catalog: "Catalog",
+ initialization: "Repository initialized",
+ ci: "CI workflow started"
  };
 
  return labels[value] ?? value;
@@ -190,6 +203,75 @@ export default function CreateServicePage() {
  const [errors, setErrors] = useState<FormErrors>({});
  const [isSubmitting, setIsSubmitting] = useState(false);
  const [createdService, setCreatedService] = useState<CreateServiceResponse | null>(null);
+
+ useEffect(() => {
+ const repositoryName = createdService?.repository.name;
+ const runId = createdService?.steps?.ci.details?.workflowRunId;
+ const currentStatus = createdService?.steps?.ci.details?.finalWorkflowStatus;
+
+ if (!repositoryName || typeof runId !== "number" || createdService?.steps?.ci.message.includes("completed") || currentStatus === "success" || currentStatus === "failure") {
+ return;
+ }
+
+ let cancelled = false;
+ let timeout: ReturnType<typeof setTimeout> | undefined;
+
+ async function refreshWorkflowStatus() {
+ try {
+ const response = await fetch(`/api/services/create/workflow?repo=${encodeURIComponent(repositoryName!)}&runId=${runId}`);
+ if (!response.ok) {
+ throw new Error("Workflow status request failed.");
+ }
+ const result = await response.json();
+
+ if (cancelled) {
+ return;
+ }
+
+ setCreatedService((current) => {
+ if (!current?.steps) {
+ return current;
+ }
+
+ const finalStatus = typeof result.finalWorkflowStatus === "string" ? result.finalWorkflowStatus : "unknown";
+ return {
+ ...current,
+ steps: {
+ ...current.steps,
+ ci: {
+ ...current.steps.ci,
+ status: result.complete && finalStatus !== "success" ? "failed" : "success",
+ message: result.complete ? `CI workflow completed with status ${finalStatus}.` : `CI workflow started and is ${finalStatus}.`,
+ details: {
+ ...current.steps.ci.details,
+ workflowRunUrl: result.workflowRunUrl,
+ workflowRunId: result.workflowRunId,
+ finalWorkflowStatus: finalStatus
+ }
+ }
+ }
+ };
+ });
+
+ if (!result.complete) {
+ timeout = setTimeout(refreshWorkflowStatus, 3000);
+ }
+ } catch {
+ if (!cancelled) {
+ timeout = setTimeout(refreshWorkflowStatus, 5000);
+ }
+ }
+ }
+
+ timeout = setTimeout(refreshWorkflowStatus, 3000);
+
+ return () => {
+ cancelled = true;
+ if (timeout) {
+ clearTimeout(timeout);
+ }
+ };
+ }, [createdService?.repository.name, createdService?.steps?.ci.details?.workflowRunId, createdService?.steps?.ci.details?.finalWorkflowStatus, createdService?.steps?.ci.message]);
 
  const preview = useMemo(() => {
  const serviceSlug = toKebab(form.serviceName) || "new-service";
@@ -287,7 +369,7 @@ export default function CreateServicePage() {
  });
  }
  } else {
- notifyWarning("Demo service created", {
+ notifyWarning("Service preview created", {
  id: toastId,
  description: result.warning ?? "GitHub configuration is missing, so no external repository was created."
  });
@@ -307,7 +389,7 @@ export default function CreateServicePage() {
  <PageHeader
  eyebrow="Golden path"
  title="Create service"
- description="Create a GitHub repository from an approved template while keeping catalog, audit, and runtime integration updates in demo mode for now."
+ description="Create a GitHub repository from an approved template with catalog, audit, and runtime integration metadata."
  />
 
  <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
@@ -472,7 +554,7 @@ export default function CreateServicePage() {
  <dt className="font-medium text-muted">Docker image</dt>
  <dd className="mt-1 break-all font-semibold text-slate-800">{preview.dockerImageName}</dd>
  <dd className="mt-1">
- <StatusBadge label="platform-managed" tone="neutral" />
+ <StatusBadge label="platform-managed" tone="neutral" source={null} />
  </dd>
  </div>
  <div>
@@ -489,7 +571,7 @@ export default function CreateServicePage() {
  <p className="text-sm font-medium text-muted">Selected environments</p>
  <div className="mt-2 flex flex-wrap gap-2">
  {preview.environments.length > 0
- ? preview.environments.map((environment) => <StatusBadge key={environment} label={environment} />)
+ ? preview.environments.map((environment) => <StatusBadge key={environment} label={environment} source={null} />)
  : <span className="text-sm text-muted">None selected</span>}
  </div>
  </div>
@@ -498,14 +580,14 @@ export default function CreateServicePage() {
  <p className="text-sm font-medium text-muted">Selected capabilities</p>
  <div className="mt-2 flex flex-wrap gap-2">
  {preview.capabilities.length > 0
- ? preview.capabilities.map((capability) => <StatusBadge key={capability} label={capability} />)
+ ? preview.capabilities.map((capability) => <StatusBadge key={capability} label={capability} source={null} />)
  : <span className="text-sm text-muted">None selected</span>}
  </div>
  </div>
  </section>
 
  <section className="console-panel rounded-md p-5">
- <h2 className="font-heading text-lg font-semibold text-ink">Mock execution plan</h2>
+ <h2 className="font-heading text-lg font-semibold text-ink">Execution plan</h2>
  <div className="mt-4 space-y-3">
  {[
  { icon: GitBranch, label: "Create GitHub repository from template" },
@@ -527,7 +609,7 @@ export default function CreateServicePage() {
  </div>
  {!can("create service") ? (
  <p className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
- {selectedRole} cannot create services in this mock RBAC model.
+ {selectedRole} cannot create services with the current RBAC policy.
  </p>
  ) : null}
  <button
@@ -553,7 +635,7 @@ export default function CreateServicePage() {
  <AlertTriangle className="h-5 w-5 text-amber-700" aria-hidden="true" />
  )}
  <h2 className={`text-base font-semibold ${isCriticalWorkflowComplete(createdService.steps) ? "text-emerald-900" : "text-amber-950"}`}>
- {createdService.mode === "github" ? "Service workflow result" : "Demo service created"}
+ {createdService.mode === "github" ? "Service workflow result" : "Service preview created"}
  </h2>
  </div>
  {createdService.warning ? <p className={`mt-3 text-sm ${isCriticalWorkflowComplete(createdService.steps) ? "text-emerald-900" : "text-amber-950"}`}>{createdService.warning}</p> : null}
@@ -565,6 +647,9 @@ export default function CreateServicePage() {
  const fleetRegistryFiles = Array.isArray(step.details?.files)
  ? step.details.files.filter(isFleetRegistryFile)
  : [];
+ const workflowRunUrl = typeof step.details?.workflowRunUrl === "string" ? step.details.workflowRunUrl : undefined;
+ const workflowRunId = typeof step.details?.workflowRunId === "number" ? step.details.workflowRunId : undefined;
+ const finalWorkflowStatus = typeof step.details?.finalWorkflowStatus === "string" ? step.details.finalWorkflowStatus : undefined;
 
  return (
  <div key={key} className="rounded-md border border-white/70 bg-white px-3 py-2">
@@ -579,7 +664,7 @@ export default function CreateServicePage() {
  <p className="mt-0.5 break-words">{step.message}</p>
  {key === "fleetDiscovery" && topics.length > 0 ? (
  <div className="mt-2 flex flex-wrap gap-1">
- {topics.map((topic) => <StatusBadge key={topic} label={topic} tone="neutral" />)}
+ {topics.map((topic) => <StatusBadge key={topic} label={topic} tone="neutral" source={null} />)}
  </div>
  ) : null}
  {key === "fleetRegistry" && fleetRegistryFiles.length > 0 ? (
@@ -590,6 +675,18 @@ export default function CreateServicePage() {
  </li>
  ))}
  </ul>
+ ) : null}
+ {key === "ci" && (workflowRunUrl || workflowRunId || finalWorkflowStatus) ? (
+ <dl className="mt-2 grid gap-1 text-xs">
+ {workflowRunUrl ? (
+ <div className="flex flex-wrap gap-1">
+ <dt className="font-semibold">Workflow run URL:</dt>
+ <dd><a href={workflowRunUrl} target="_blank" rel="noreferrer" className="break-all underline">{workflowRunUrl}</a></dd>
+ </div>
+ ) : null}
+ {workflowRunId ? <div className="flex gap-1"><dt className="font-semibold">Workflow run ID:</dt><dd>{workflowRunId}</dd></div> : null}
+ {finalWorkflowStatus ? <div className="flex gap-1"><dt className="font-semibold">Final workflow status:</dt><dd>{finalWorkflowStatus}</dd></div> : null}
+ </dl>
  ) : null}
  {key === "secrets" && step.status === "warning" ? <p className="mt-1 text-xs font-semibold">Needs platform attention.</p> : null}
  {remainingPlaceholderFilePaths && remainingPlaceholderFilePaths.length > 0 ? (

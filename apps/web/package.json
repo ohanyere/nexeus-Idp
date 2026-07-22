@@ -9,7 +9,7 @@
     "start": "next start",
     "postinstall": "sh scripts/prisma-generate.sh",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src --ext .ts,.tsx",
-    "test": "node --test --experimental-strip-types --experimental-test-module-mocks --import ./scripts/register-typescript-loader.mjs src/lib/server/github-personalization.test.ts",
+    "test": "node --test --experimental-strip-types --experimental-test-module-mocks --import ./scripts/register-typescript-loader.mjs src/lib/server/*.test.ts",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "sh scripts/prisma-generate.sh",
     "prisma:migrate": "prisma migrate dev",

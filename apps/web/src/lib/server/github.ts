@@ -12,6 +12,11 @@ import {
  type UnresolvedTemplatePlaceholder
 } from "@/lib/server/github-personalization";
 import { encryptGitHubActionsSecret } from "@/lib/server/secret-encryption";
+import {
+ REPOSITORY_INITIALIZATION_MARKER,
+ buildRepositoryInitializationMarker,
+ hasRepositoryInitializationGuard
+} from "@/lib/server/github-bootstrap";
 
 export type RepositoryInfo = {
  url: string;
@@ -58,6 +63,20 @@ export type FleetRegistryRegistrationResult = {
 export type GenerateRepositoryResult = {
  repository: RepositoryInfo;
  alreadyExisted: boolean;
+};
+
+export type RepositoryInitializationResult = {
+ markerPath: string;
+ commitSha: string;
+ status: "created" | "unchanged";
+};
+
+export type RepositoryWorkflowRunResult = {
+ id: number;
+ url: string;
+ status: string;
+ conclusion?: string;
+ headSha: string;
 };
 
 export type RepositoryReadinessResult = {
@@ -160,6 +179,9 @@ const fleetRegistryRepo = "platform-core";
 const fleetRegistryBranch = "main";
 const fleetRegistryEnvironments = ["dev", "stage", "prod"] as const satisfies readonly FleetRegistryEnvironment[];
 const fleetRegistryCommitMessage = "feat: register generated services in fleet registry";
+const initializationCommitMessage = "chore: complete repository initialization";
+const workflowRunMaxAttempts = 15;
+const workflowRunPollMs = 1000;
 
 export class GitHubConfigurationError extends Error {
  constructor(message: string) {
@@ -513,6 +535,34 @@ export class GitHubService {
 
  if (readiness.treeFileCount === 0) {
  throw new GitHubConfigurationError(`Source template repository ${template.owner}/${template.repo} is empty.`);
+ }
+
+ const treeResponse = await this.octokit.git.getTree({
+ owner: template.owner,
+ repo: template.repo,
+ tree_sha: readiness.readyTreeSha,
+ recursive: "true"
+ });
+ const workflowFiles = treeResponse.data.tree.filter((item) => item.type === "blob" && item.path?.match(/^\.github\/workflows\/.*\.ya?ml$/) && item.sha);
+
+ if (workflowFiles.length === 0) {
+ throw new GitHubConfigurationError(`Source template repository ${template.owner}/${template.repo} has no GitHub Actions workflow.`);
+ }
+
+ for (const workflowFile of workflowFiles) {
+ const blobResponse = await this.octokit.git.getBlob({
+ owner: template.owner,
+ repo: template.repo,
+ file_sha: workflowFile.sha!
+ });
+ const workflow = Buffer.from(blobResponse.data.content, "base64").toString("utf8");
+
+ if (!hasRepositoryInitializationGuard(workflow)) {
+ throw new GitHubConfigurationError(
+ `Source template workflow ${template.owner}/${template.repo}/${workflowFile.path} is missing the repository initialization guard. ` +
+ `It must declare IDP_REPOSITORY_INITIALIZED and check ${REPOSITORY_INITIALIZATION_MARKER} before any full CI job can run.`
+ );
+ }
  }
  } catch (error) {
  if (error instanceof GitHubConfigurationError) {
@@ -1004,6 +1054,95 @@ export class GitHubService {
  { name: "DOCKERHUB_USERNAME", value: requireEnv("DOCKERHUB_USERNAME") },
  { name: "DOCKERHUB_TOKEN", value: requireEnv("DOCKERHUB_TOKEN") }
  ]);
+ }
+
+ async completeRepositoryInitialization(repo: string, branch: string): Promise<RepositoryInitializationResult> {
+ const content = buildRepositoryInitializationMarker();
+
+ try {
+ const existingResponse = await this.octokit.repos.getContent({
+ owner: this.organization,
+ repo,
+ path: REPOSITORY_INITIALIZATION_MARKER,
+ ref: branch
+ });
+
+ if (!Array.isArray(existingResponse.data) && existingResponse.data.type === "file" && existingResponse.data.content) {
+ const existingContent = Buffer.from(existingResponse.data.content, "base64").toString("utf8");
+ if (existingContent === content) {
+ const refResponse = await this.octokit.git.getRef({ owner: this.organization, repo, ref: `heads/${branch}` });
+ return { markerPath: REPOSITORY_INITIALIZATION_MARKER, commitSha: refResponse.data.object.sha, status: "unchanged" };
+ }
+ }
+ } catch (error) {
+ if (getGitHubErrorStatus(error) !== 404) {
+ throw error;
+ }
+ }
+
+ const response = await this.octokit.repos.createOrUpdateFileContents({
+ owner: this.organization,
+ repo,
+ path: REPOSITORY_INITIALIZATION_MARKER,
+ message: initializationCommitMessage,
+ content: Buffer.from(content, "utf8").toString("base64"),
+ branch
+ });
+ const commitSha = response.data.commit.sha;
+
+ if (!commitSha) {
+ throw new Error(`GitHub did not return the initialization commit SHA for ${this.organization}/${repo}.`);
+ }
+
+ return { markerPath: REPOSITORY_INITIALIZATION_MARKER, commitSha, status: "created" };
+ }
+
+ async waitForWorkflowRun(repo: string, headSha: string): Promise<RepositoryWorkflowRunResult | undefined> {
+ for (let attempt = 1; attempt <= workflowRunMaxAttempts; attempt += 1) {
+ const response = await this.octokit.actions.listWorkflowRunsForRepo({
+ owner: this.organization,
+ repo,
+ event: "push",
+ head_sha: headSha,
+ per_page: 10
+ });
+ const run = response.data.workflow_runs.find((candidate) => candidate.head_sha === headSha);
+
+ if (run) {
+ return {
+ id: run.id,
+ url: run.html_url,
+ status: run.status ?? "unknown",
+ conclusion: run.conclusion ?? undefined,
+ headSha: run.head_sha
+ };
+ }
+
+ if (attempt === workflowRunMaxAttempts) {
+ return undefined;
+ }
+
+ await sleep(workflowRunPollMs);
+ }
+
+ return undefined;
+ }
+
+ async getWorkflowRun(repo: string, runId: number): Promise<RepositoryWorkflowRunResult> {
+ const response = await this.octokit.actions.getWorkflowRun({
+ owner: this.organization,
+ repo,
+ run_id: runId
+ });
+ const run = response.data;
+
+ return {
+ id: run.id,
+ url: run.html_url,
+ status: run.status ?? "unknown",
+ conclusion: run.conclusion ?? undefined,
+ headSha: run.head_sha
+ };
  }
 }
 

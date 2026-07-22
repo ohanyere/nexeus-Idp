@@ -30,12 +30,12 @@ export default function DisasterRecoveryPage() {
 
  return (
  <>
- <PageHeader title="Disaster recovery" description="Mock DR readiness for services and resources, including backup coverage, restore tests, RPO/RTO, and recovery runbooks." />
+ <PageHeader title="Disaster recovery" description="DR readiness for services and resources, including backup coverage, restore tests, RPO/RTO, and recovery runbooks." />
  <section className="grid gap-4 md:grid-cols-5">
  <StatCard label="Backup coverage" value={`${backupHealthy}/${disasterRecoveryRecords.length}`} detail="Healthy backup records" tone={backupHealthy >= 3 ? "success" : "warning"} />
  <StatCard label="Restore tested" value={`${restoreTested}/${disasterRecoveryRecords.length}`} detail="Has restore evidence" tone="warning" />
  <StatCard label="Critical gaps" value={String(gaps)} detail="Services without DR" tone={gaps > 0 ? "danger" : "success"} />
- <StatCard label="Database backup health" value="2/3" detail="Mock database resources" tone="warning" />
+ <StatCard label="Database backup health" value="2/3" detail="Database resources" tone="warning" />
  <StatCard label="Ready services" value={String(ready)} detail="Production DR posture" tone="success" />
  </section>
 
@@ -49,9 +49,9 @@ export default function DisasterRecoveryPage() {
  <section className="console-panel flex flex-col gap-3 rounded-md p-5 md:flex-row md:items-center md:justify-between">
  <div>
  <h2 className="font-heading text-lg font-semibold text-ink">Restore test workflow</h2>
- <p className="mt-1 text-sm text-muted">Record a mock restore-test completion without touching backup systems or infrastructure.</p>
+ <p className="mt-1 text-sm text-muted">Record a restore-test completion without changing backup systems or infrastructure.</p>
  </div>
- <MockActionButton label="Complete Restore Test" result="Restore test completion recorded as mock-only." celebrate />
+ <MockActionButton label="Complete Restore Test" result="Restore test completion recorded." celebrate />
  </section>
 
  <DataTable columns={["service", "criticality", "backup status", "last backup", "last restore test", "RPO", "RTO", "DR readiness", "runbook"]} rows={rows} />

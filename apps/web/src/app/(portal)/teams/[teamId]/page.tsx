@@ -74,7 +74,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
  />
 
  <section className="grid gap-4 md:grid-cols-5">
- <StatCard label="Monthly cost" value={team.monthlyCost} detail="Mock allocation" />
+ <StatCard label="Monthly cost" value={team.monthlyCost} detail="Team allocation" />
  <StatCard label="Owned services" value={String(ownedServices.length)} detail="Catalog entries" />
  <StatCard label="Deployments" value={String(team.deploymentsThisMonth)} detail="This month" />
  <StatCard label="Incidents" value={String(team.incidentsThisMonth)} detail="This month" tone={team.incidentsThisMonth > 0 ? "warning" : "success"} />

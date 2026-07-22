@@ -42,6 +42,39 @@ GITHUB_TEMPLATE_REPO_WORKER_SERVICE=
 
 The token needs access to read generated service repositories, create repositories from templates, write contents/secrets/topics for generated repositories, and create promotion or rollback pull requests.
 
+### Golden-path workflow bootstrap contract
+
+Every workflow copied by a configured golden-path template must contain the marker path `.idp/repository-initialized` and the contract token `IDP_REPOSITORY_INITIALIZED`. A guard job must check out the repository and expose whether that marker exists; every Docker build, push, scan, manifest, and deployment job must depend on that guard and run only when it reports `true`.
+
+```yaml
+on:
+  push:
+
+jobs:
+  repository-initialized:
+    runs-on: ubuntu-latest
+    outputs:
+      initialized: ${{ steps.guard.outputs.initialized }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: guard
+        env:
+          IDP_REPOSITORY_INITIALIZED: .idp/repository-initialized
+        run: |
+          if test -f "$IDP_REPOSITORY_INITIALIZED"; then
+            echo "initialized=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "initialized=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: repository-initialized
+    if: needs.repository-initialized.outputs.initialized == 'true'
+    # Existing build, push, scan, and GitOps steps remain unchanged.
+```
+
+The initial template-generated push therefore finishes successfully with full CI skipped. The IDP writes the marker only after personalization, placeholder validation, Actions secrets, fleet registration, and catalog persistence succeed. That marker commit triggers the first full CI through the normal `push` event. The marker remains in the repository, so all later developer pushes continue to run CI automatically. The IDP rejects a source template missing this contract before creating a destination repository.
+
 If `GITHUB_TOKEN` or repository metadata is missing, runtime status shows GitHub signals as unavailable. Catalog-derived image values may appear with a `Seed` source, not as live GitHub success.
 
 ## ArgoCD

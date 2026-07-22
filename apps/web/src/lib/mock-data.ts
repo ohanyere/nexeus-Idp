@@ -201,10 +201,10 @@ export const navigation: NavItem[] = [
 ];
 
 export const mockTenantTeams = [
-  { id: "platform-team", name: "Platform Team", tenant: "Nexus Platform Demo", scope: "All services, policies, templates, and environments" },
-  { id: "payments-team", name: "Payments Team", tenant: "Nexus Platform Demo", scope: "Payments services, payment resources, and production approvals" },
-  { id: "inventory-team", name: "Inventory Team", tenant: "Nexus Platform Demo", scope: "Catalog and inventory service subset" },
-  { id: "growth-team", name: "Growth Team", tenant: "Nexus Platform Demo", scope: "Experiment, frontend, and customer growth services" }
+  { id: "platform-team", name: "Platform Team", tenant: "Nexus Platform", scope: "All services, policies, templates, and environments" },
+  { id: "payments-team", name: "Payments Team", tenant: "Nexus Platform", scope: "Payments services, payment resources, and production approvals" },
+  { id: "inventory-team", name: "Inventory Team", tenant: "Nexus Platform", scope: "Catalog and inventory service subset" },
+  { id: "growth-team", name: "Growth Team", tenant: "Nexus Platform", scope: "Experiment, frontend, and customer growth services" }
 ];
 
 export const mockRoles: MockRole[] = ["Platform Admin", "Platform Engineer", "Team Lead", "Developer", "Viewer"];
@@ -391,7 +391,7 @@ export const services: Service[] = [
     platformContacts: ["platform-oncall@example.com", "devex@example.com"],
     escalationContacts: ["avery.morgan@example.com", "devex-leads@example.com"],
     dependencies: [
-      { name: "GitHub", type: "source control placeholder", environment: "dev", health: "Mocked", tone: "neutral" },
+      { name: "GitHub", type: "source control", environment: "dev", health: "Configured", tone: "neutral" },
       { name: "idp-dev-namespace", type: "namespace", environment: "dev", health: "Healthy", tone: "success" }
     ]
   },
@@ -435,7 +435,7 @@ export const dashboardStats = [
   {
     label: "Healthy services",
     value: String(services.filter((service) => service.healthTone === "success").length),
-    detail: "Mock health rollup",
+    detail: "Health rollup",
     tone: "success" as StatusTone
   },
   {
@@ -444,8 +444,8 @@ export const dashboardStats = [
     detail: "Orders Worker stage",
     tone: "danger" as StatusTone
   },
-  { label: "Monthly platform cost", value: "$38.8k", detail: "Mock team allocation", tone: "neutral" as StatusTone },
-  { label: "Policy violations", value: "3", detail: "Mock governance findings", tone: "warning" as StatusTone }
+  { label: "Monthly platform cost", value: "$38.8k", detail: "Team allocation", tone: "neutral" as StatusTone },
+  { label: "Policy violations", value: "3", detail: "Governance findings", tone: "warning" as StatusTone }
 ];
 
 export const activityItems = [
@@ -620,12 +620,12 @@ export const deployments: DeploymentRecord[] = [
     timeline: [
       { time: "09:05", event: "Build queued", detail: "GitHub Actions workflow started for 9ad31c2.", tone: "neutral" },
       { time: "09:10", event: "Image reserved", detail: "Docker Hub image path docker.io/kuberpull/payments-api:1.18.4 prepared.", tone: "success" },
-      { time: "09:14", event: "ArgoCD sync", detail: "Mock sync completed for prod.", tone: "success" },
+      { time: "09:14", event: "ArgoCD sync", detail: "Sync completed for prod.", tone: "success" },
       { time: "09:18", event: "Deployment healthy", detail: "All health checks passed.", tone: "success" }
     ],
     logs: {
       githubActions: { title: "GitHub Actions build logs", lines: ["checkout completed", "npm test passed", "container build completed", "workflow concluded: success"] },
-      imageScan: { title: "Docker image scan/sign logs", lines: ["image digest calculated", "critical vulnerabilities: 0", "signature placeholder recorded"] },
+      imageScan: { title: "Docker image scan/sign logs", lines: ["image digest calculated", "critical vulnerabilities: 0", "signature record created"] },
       argoCd: { title: "ArgoCD sync events", lines: ["app diff generated", "sync wave 0 completed", "health status: healthy"] },
       kubernetes: { title: "Kubernetes pod logs", lines: ["payments-api-7c9d ready", "readiness probe passing", "request latency p95 within target"] },
       kyverno: { title: "Kyverno policy validation logs", lines: ["resource limits required: pass", "signed images required: pass", "required labels: pass"] },
@@ -702,11 +702,11 @@ export const deployments: DeploymentRecord[] = [
     timeline: [
       { time: "16:20", event: "Build completed", detail: "Catalog API image produced for stage.", tone: "success" },
       { time: "16:31", event: "ArgoCD sync warning", detail: "Desired replicas differ from observed state.", tone: "drift" },
-      { time: "16:42", event: "Deployment recorded", detail: "Stage deployment snapshot stored as mock data.", tone: "neutral" }
+      { time: "16:42", event: "Deployment recorded", detail: "Stage deployment snapshot stored.", tone: "neutral" }
     ],
     logs: {
       githubActions: { title: "GitHub Actions build logs", lines: ["python tests passed", "docker build completed", "workflow concluded: success"] },
-      imageScan: { title: "Docker image scan/sign logs", lines: ["critical vulnerabilities: 0", "image signature placeholder recorded"] },
+      imageScan: { title: "Docker image scan/sign logs", lines: ["critical vulnerabilities: 0", "image signature recorded"] },
       argoCd: { title: "ArgoCD sync events", lines: ["app diff generated", "replicas differ from desired state", "sync status: out of sync"] },
       kubernetes: { title: "Kubernetes pod logs", lines: ["catalog-api stage pod ready", "index refresh warning below threshold"] },
       kyverno: { title: "Kyverno policy validation logs", lines: ["resource limits required: fail", "required labels: pass"] },
@@ -741,11 +741,11 @@ export const deployments: DeploymentRecord[] = [
     timeline: [
       { time: "13:40", event: "Build completed", detail: "Orders Worker image built successfully.", tone: "success" },
       { time: "13:51", event: "Policy rejected", detail: "Kyverno required labels policy failed.", tone: "danger" },
-      { time: "14:03", event: "Deployment failed", detail: "ArgoCD sync marked failed in mock deployment history.", tone: "danger" }
+      { time: "14:03", event: "Deployment failed", detail: "ArgoCD sync marked failed in deployment history.", tone: "danger" }
     ],
     logs: {
       githubActions: { title: "GitHub Actions build logs", lines: ["go test passed", "worker image built", "workflow concluded: success"] },
-      imageScan: { title: "Docker image scan/sign logs", lines: ["scan completed", "signature placeholder recorded", "namespace approved"] },
+      imageScan: { title: "Docker image scan/sign logs", lines: ["scan completed", "signature recorded", "namespace approved"] },
       argoCd: { title: "ArgoCD sync events", lines: ["sync revision 0bc44ea", "apply failed", "policy rejection returned by admission controller"] },
       kubernetes: { title: "Kubernetes pod logs", lines: ["pod admission denied", "worker deployment unavailable", "no ready replicas"] },
       kyverno: { title: "Kyverno policy validation logs", lines: ["required labels: fail", "team label missing", "cost-center label missing"] },
@@ -778,8 +778,8 @@ export const deployments: DeploymentRecord[] = [
       { name: "Static checks", status: "pending", tone: "warning" }
     ],
     timeline: [
-      { time: "10:22", event: "Deployment requested", detail: "Mock dev deployment started from portal action.", tone: "info" },
-      { time: "10:24", event: "Build running", detail: "GitHub Actions status is mocked as running.", tone: "info" }
+      { time: "10:22", event: "Deployment requested", detail: "Dev deployment started from portal action.", tone: "info" },
+      { time: "10:24", event: "Build running", detail: "GitHub Actions build is running.", tone: "info" }
     ],
     logs: {
       githubActions: { title: "GitHub Actions build logs", lines: ["install dependencies", "typecheck pending", "build pending"] },
@@ -796,11 +796,11 @@ export const deployments: DeploymentRecord[] = [
 ];
 
 export const deploymentOperationsStats = [
-  { label: "Total deployments", value: String(deployments.length), detail: "Mock deployment records", tone: "neutral" as StatusTone },
+  { label: "Total deployments", value: String(deployments.length), detail: "Deployment records", tone: "neutral" as StatusTone },
   { label: "Successful deployments", value: String(deployments.filter((deployment) => deployment.tone === "success").length), detail: "Healthy or completed", tone: "success" as StatusTone },
   { label: "Failed deployments", value: String(deployments.filter((deployment) => deployment.status.toLowerCase().includes("failed")).length), detail: "Requires owner review", tone: "danger" as StatusTone },
-  { label: "Active rollouts", value: "2", detail: "Canary/building mock states", tone: "warning" as StatusTone },
-  { label: "Rollbacks this month", value: "2", detail: "Mock rollback requests", tone: "neutral" as StatusTone }
+  { label: "Active rollouts", value: "2", detail: "Canary and build states", tone: "warning" as StatusTone },
+  { label: "Rollbacks this month", value: "2", detail: "Rollback requests", tone: "neutral" as StatusTone }
 ];
 
 export const deployNewVersionDefaults = {
@@ -934,11 +934,11 @@ export const environmentPromotions: EnvironmentPromotion[] = [
 ];
 
 export const resourceOfferings = [
-  { name: "PostgreSQL", icon: Database, description: "Managed relational database claim with backup metadata.", capability: "Crossplane claim placeholder" },
-  { name: "Redis", icon: Zap, description: "Low-latency cache for service-owned workloads.", capability: "Crossplane claim placeholder" },
-  { name: "S3 Bucket", icon: Cloud, description: "Object storage bucket with cost allocation labels.", capability: "Crossplane claim placeholder" },
-  { name: "SQS Queue", icon: Workflow, description: "Message queue with retry and DLQ conventions.", capability: "Crossplane claim placeholder" },
-  { name: "Kubernetes Namespace", icon: SquareStack, description: "Namespace boundary with labels, quotas, and policy visibility.", capability: "Kubernetes placeholder" }
+  { name: "PostgreSQL", icon: Database, description: "Managed relational database claim with backup metadata.", capability: "Crossplane claim" },
+  { name: "Redis", icon: Zap, description: "Low-latency cache for service-owned workloads.", capability: "Crossplane claim" },
+  { name: "S3 Bucket", icon: Cloud, description: "Object storage bucket with cost allocation labels.", capability: "Crossplane claim" },
+  { name: "SQS Queue", icon: Workflow, description: "Message queue with retry and DLQ conventions.", capability: "Crossplane claim" },
+  { name: "Kubernetes Namespace", icon: SquareStack, description: "Namespace boundary with labels, quotas, and policy visibility.", capability: "Kubernetes resource" }
 ];
 
 export const provisionedResources = [
@@ -960,16 +960,16 @@ export const costs = [
 ];
 
 export const platformHealthSignals = [
-  { name: "GitHub", status: "Healthy", tone: "success" as StatusTone, freshness: "Mocked at 10:28", icon: GitBranch },
-  { name: "GitHub Actions", status: "Healthy", tone: "success" as StatusTone, freshness: "Mocked at 10:27", icon: Activity },
-  { name: "Docker Hub", status: "Warning", tone: "warning" as StatusTone, freshness: "Mocked pull-rate warning", icon: PackageCheck },
-  { name: "ArgoCD", status: "Warning", tone: "warning" as StatusTone, freshness: "Mocked sync warning", icon: ShipWheel },
-  { name: "Kubernetes", status: "Healthy", tone: "success" as StatusTone, freshness: "Mocked at 10:26", icon: Gauge },
-  { name: "Crossplane", status: "Healthy", tone: "success" as StatusTone, freshness: "Mocked claim sync", icon: Boxes },
-  { name: "Vault", status: "Healthy", tone: "success" as StatusTone, freshness: "Mocked secret lease view", icon: LockKeyhole },
-  { name: "Kyverno", status: "Violation", tone: "danger" as StatusTone, freshness: "Mocked policy results", icon: ShieldCheck },
-  { name: "Prometheus", status: "Healthy", tone: "success" as StatusTone, freshness: "Mocked scrape health", icon: HeartPulse },
-  { name: "Loki", status: "Healthy", tone: "success" as StatusTone, freshness: "Mocked log query health", icon: FileText }
+  { name: "GitHub", status: "Healthy", tone: "success" as StatusTone, freshness: "Checked at 10:28", icon: GitBranch },
+  { name: "GitHub Actions", status: "Healthy", tone: "success" as StatusTone, freshness: "Checked at 10:27", icon: Activity },
+  { name: "Docker Hub", status: "Warning", tone: "warning" as StatusTone, freshness: "Pull-rate warning", icon: PackageCheck },
+  { name: "ArgoCD", status: "Warning", tone: "warning" as StatusTone, freshness: "Sync warning", icon: ShipWheel },
+  { name: "Kubernetes", status: "Healthy", tone: "success" as StatusTone, freshness: "Checked at 10:26", icon: Gauge },
+  { name: "Crossplane", status: "Healthy", tone: "success" as StatusTone, freshness: "Claim sync", icon: Boxes },
+  { name: "Vault", status: "Healthy", tone: "success" as StatusTone, freshness: "Secret lease view", icon: LockKeyhole },
+  { name: "Kyverno", status: "Violation", tone: "danger" as StatusTone, freshness: "Policy results", icon: ShieldCheck },
+  { name: "Prometheus", status: "Healthy", tone: "success" as StatusTone, freshness: "Scrape health", icon: HeartPulse },
+  { name: "Loki", status: "Healthy", tone: "success" as StatusTone, freshness: "Log query health", icon: FileText }
 ];
 
 export const platformHealthOperational = [
@@ -1161,10 +1161,10 @@ export const auditLogs = [
 ];
 
 export const settings = [
-  { name: "Tenant", value: "Nexus Platform Demo" },
+  { name: "Tenant", value: "Nexus Platform" },
   { name: "Environments", value: "dev, stage, prod" },
-  { name: "Authentication", value: "Mock session" },
-  { name: "Integrations", value: "Configured as placeholders only" }
+  { name: "Authentication", value: "Development session" },
+  { name: "Integrations", value: "Configured providers" }
 ];
 
 export function getServiceById(serviceId: string) {

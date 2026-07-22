@@ -47,7 +47,7 @@ export function getServiceResourceInventory(serviceId: string): ServiceResourceI
 
   return {
     serviceId,
-    generatedAt: "Mocked at 10:32",
+    generatedAt: "Recorded at 10:32",
     source: "Demo",
     resources
   };
@@ -160,7 +160,7 @@ function quotaStatus(serviceId: string, environment: EnvironmentName, claimCount
 
 function eventSummary(serviceName: string, environment: EnvironmentName, status?: string) {
   if (!status) {
-    return `${serviceName} ${environment} has no recent deployment event in the mock snapshot.`;
+    return `${serviceName} ${environment} has no recent deployment event in the current snapshot.`;
   }
 
   return `${serviceName} ${environment} latest event: ${status}.`;

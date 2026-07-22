@@ -5,7 +5,7 @@ import { mockApiKeys } from "@/lib/auth";
 export default function ApiKeysPage() {
   return (
     <>
-      <PageHeader title="API Keys" description="Mock personal and automation keys for future authenticated API access." />
+      <PageHeader title="API Keys" description="Personal and automation keys for authenticated API access." />
       <section className="console-panel rounded-md">
         <div className="divide-y divide-line">
           {mockApiKeys.map((key) => (

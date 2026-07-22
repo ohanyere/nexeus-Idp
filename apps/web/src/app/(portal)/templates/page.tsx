@@ -10,8 +10,8 @@ export default function TemplatesPage() {
  description="Approved service creation paths are represented as template metadata only; repository generation is not connected yet."
  />
  <section className="grid gap-4 md:grid-cols-3">
- <StatCard label="Templates" value={String(templates.length)} detail="Published mock versions" />
- <StatCard label="Pending requests" value="1" detail="Repository workflow placeholder" tone="warning" />
+ <StatCard label="Templates" value={String(templates.length)} detail="Published versions" />
+ <StatCard label="Pending requests" value="1" detail="Repository workflow" tone="warning" />
  <StatCard label="Connected providers" value="0" detail="GitHub is intentionally offline" />
  </section>
  <section className="grid gap-4 lg:grid-cols-2">

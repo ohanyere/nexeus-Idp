@@ -107,7 +107,7 @@ export const mockNotifications: MockNotification[] = [
   { id: "notif-approval", category: "Approval", title: "Checkout stage promotion waiting", detail: "Team Lead approval is required before merge.", time: "2 hrs ago", status: "Unread" },
   { id: "notif-rollback", category: "Rollback", title: "Checkout rollback requested", detail: "Rollback target v2.7.1 is ready for review.", time: "2 hrs ago", status: "Read" },
   { id: "notif-policy", category: "Policy", title: "Orders Worker labels failed", detail: "Required labels policy blocked stage rollout.", time: "3 hrs ago", status: "Unread" },
-  { id: "notif-invite", category: "Invitation", title: "New team invitation prepared", detail: "Mock invitation for commerce developer access.", time: "1 day ago", status: "Read" }
+  { id: "notif-invite", category: "Invitation", title: "New team invitation prepared", detail: "Invitation prepared for commerce developer access.", time: "1 day ago", status: "Read" }
 ];
 
 export const mockApiKeys: ApiKeyRecord[] = [

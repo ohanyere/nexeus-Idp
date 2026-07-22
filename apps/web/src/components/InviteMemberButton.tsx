@@ -47,7 +47,7 @@ export function InviteMemberButton({ teamId }: { teamId?: string }) {
             <div className="flex items-start justify-between gap-4 border-b border-line bg-canvas px-5 py-4">
               <div>
                 <h2 className="font-heading text-lg font-semibold text-ink">Invite member</h2>
-                <p className="mt-1 text-sm text-muted">Mock invitation only. No email or identity provider call is made.</p>
+                <p className="mt-1 text-sm text-muted">Invitation preview only. No email or identity provider call is made.</p>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-700 hover:bg-canvas" aria-label="Close invite modal">
                 <X className="h-4 w-4" aria-hidden="true" />
@@ -76,7 +76,7 @@ export function InviteMemberButton({ teamId }: { teamId?: string }) {
                 <p className="mt-2 text-xs text-muted">{team.name} · requested by {selectedRole}</p>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">
-                Send mock invitation
+                Prepare invitation
               </button>
             </div>
           </section>
