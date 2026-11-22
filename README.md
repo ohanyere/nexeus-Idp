@@ -2,6 +2,8 @@
 
 A GitOps-oriented developer portal and control plane for platform engineering teams.
 
+![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white) ![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=0B1F33) ![TypeScript 5.7](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white) ![Prisma 6](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma&logoColor=white) ![Kubernetes API](https://img.shields.io/badge/Kubernetes-API-326CE5?logo=kubernetes&logoColor=white)
+
 [Getting started](#getting-started) · [Architecture](#architecture) · [Workflow](#developer-workflow) · [Testing](#testing-and-validation) · [Security](#security-and-limitations)
 
 Nexus gives application teams one place to create cataloged services from approved templates, open release and infrastructure GitOps requests, and inspect available runtime state. It coordinates GitHub, Argo CD, Kubernetes, Crossplane, and Kyverno without replacing their control loops: Nexus records intent and metadata, Git repositories hold desired state, and platform controllers reconcile it.
